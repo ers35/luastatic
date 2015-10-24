@@ -1,12 +1,20 @@
 -- The author disclaims copyright to this source code.
 
 local infile = arg[1]
-if not infile then
-  print("usage: luastatic infile.lua")
+local libluapath = arg[2]
+if not infile or not libluapath then
+  print("usage: luastatic infile.lua /path/to/liblua.a")
   os.exit()
 end
 
---~ local CC = os.getenv("CC") or "gcc"
+if libluapath then
+  local f = io.open(libluapath, "r")
+  if not f then
+    print(("liblua.a not found: %s"):format(libluapath))
+    os.exit(1)
+  end
+end
+
 local CC = "cc"
 do
   local f = io.popen(CC .. " --version")
@@ -23,14 +31,26 @@ if not infd then
   os.exit(1)
 end
 
-function fileToBlob(filename)
-  local basename = filename:match("(.+)%.")
+function binToCData(bindata, name)
   local fmt = [[
 unsigned char %s_lua[] = {
 %s
 };
 unsigned int %s_lua_len = %u;
 ]]
+  local hex = {}
+  for b in bindata:gmatch"." do
+    table.insert(hex, ("0x%02x"):format(string.byte(b)))
+  end
+  local hexstr = table.concat(hex, ", ")
+  return fmt:format(name, hexstr, name, #bindata)
+end
+
+local basename = io.popen(("basename %s"):format(infile)):read("*all")
+basename = basename:match("(.+)%.")
+
+function luaProgramToCData(filename)
+  --~ local basename = filename:match("(.+)%.")
   local f = io.open(filename, "r")
   local strdata = f:read("*all")
   -- load the chunk to check for syntax errors
@@ -40,19 +60,13 @@ unsigned int %s_lua_len = %u;
     os.exit(1)
   end
   local bindata = string.dump(chunk)
-  local hex = {}
-  for b in bindata:gmatch"." do
-    table.insert(hex, ("0x%02x"):format(string.byte(b)))
-  end
-  local hexstr = table.concat(hex, ", ")
   f:close()
-  return fmt:format(basename, hexstr, basename, #bindata)
+  return binToCData(bindata, basename)
 end
 
---~ local cdata = io.popen(("xxd -i %s"):format(infile)):read("*all")
-local cdata = fileToBlob(infile)
+local luaprogramcdata = luaProgramToCData(infile)
 
-local basename = infile:match("(.+)%.")
+--~ local basename = infile:match("(.+)%.")
 local cprog = ([[
 #include <lauxlib.h>
 #include <lua.h>
@@ -93,7 +107,7 @@ main(int argc, char *argv[])
   }
   return 0;
 }
-]]):format(cdata, basename, basename, basename)
+]]):format(luaprogramcdata, basename, basename, basename)
 local outfile = io.open(("%s.c"):format(infile), "w+")
 outfile:write(cprog)
 outfile:close()
@@ -102,8 +116,8 @@ do
   -- statically link Lua, but dynamically link everything else
   -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
   local ccformat 
-    = "%s -Os %s.c -rdynamic -Ilua-5.2.4/src lua-5.2.4/src/liblua.a -lm -ldl -o %s"
-  local ccformat = ccformat:format(CC, infile, basename)
+    = "%s -Os %s.c -rdynamic %s -lm -ldl -o %s"
+  local ccformat = ccformat:format(CC, infile, libluapath, basename)
   print(ccformat)
   io.popen(ccformat):read("*all")
 end
