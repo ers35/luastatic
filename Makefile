@@ -6,14 +6,19 @@
 
 default: luastatic
 
-luastatic:
+liblua.a:
+	cd lua-5.2.4 && make posix
+	cp lua-5.2.4/src/liblua.a . 
+
+luastatic: liblua.a
 	lua luastatic.lua luastatic.lua
 
 hello: luastatic
-	luastatic hello.lua
+	./luastatic hello.lua
 
 run: hello
 	./hello
 
 clean:
-	rm -f *.lua.c luastatic hello
+	cd lua-5.2.4 && make clean
+	rm -f *.lua.c luastatic hello liblua.a

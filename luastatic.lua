@@ -6,7 +6,8 @@ if not infile then
   os.exit()
 end
 
-local CC = os.getenv("CC") or "gcc"
+--~ local CC = os.getenv("CC") or "gcc"
+local CC = "cc"
 do
   local f = io.popen(CC .. " --version")
   f:read("*all")
@@ -100,9 +101,9 @@ outfile:close()
 do
   -- statically link Lua, but dynamically link everything else
   -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
-  local gccformat 
-    = "%s -Os %s.c -Wl,--export-dynamic -Wl,-Bstatic `pkg-config --cflags --libs lua5.2` -Wl,-Bdynamic -lm -ldl -o %s"
-  local gccstr = gccformat:format(CC, infile, basename)
-  --~ print(gccstr)
-  io.popen(gccstr):read("*all")
+  local ccformat 
+    = "%s -Os %s.c -rdynamic -Ilua-5.2.4/src lua-5.2.4/src/liblua.a -lm -ldl -o %s"
+  local ccformat = ccformat:format(CC, infile, basename)
+  print(ccformat)
+  io.popen(ccformat):read("*all")
 end
