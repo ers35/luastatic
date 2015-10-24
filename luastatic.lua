@@ -98,9 +98,10 @@ outfile:write(cprog)
 outfile:close()
 
 do
-  -- statically link lua, but dynamically everything else
+  -- statically link Lua, but dynamically link everything else
+  -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
   local gccformat 
-    = "%s -Os %s.c -Wl,-Bstatic `pkg-config --cflags --libs lua5.2` -Wl,-Bdynamic -lm -ldl -o %s"
+    = "%s -Os %s.c -Wl,--export-dynamic -Wl,-Bstatic `pkg-config --cflags --libs lua5.2` -Wl,-Bdynamic -lm -ldl -o %s"
   local gccstr = gccformat:format(CC, infile, basename)
   --~ print(gccstr)
   io.popen(gccstr):read("*all")
