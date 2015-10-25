@@ -79,8 +79,12 @@ local cprog = ([[
 typedef struct lua_State lua_State;
 typedef int (*lua_CFunction) (lua_State *L);
 lua_State *(luaL_newstate) (void);
+void (luaL_openlibs) (lua_State *L);
 const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 #define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
+const char *(lua_pushstring) (lua_State *L, const char *s);
+void  (lua_setglobal) (lua_State *L, const char *var);
+void  (lua_rawseti) (lua_State *L, int idx, int n);
 #define LUA_MULTRET	(-1)
 #define LUA_OK		0
 int (luaL_loadbufferx) (lua_State *L, const char *buff, size_t sz,
@@ -89,6 +93,7 @@ int (luaL_loadbufferx) (lua_State *L, const char *buff, size_t sz,
 int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
                             int ctx, lua_CFunction k);
 #define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
+void  (lua_createtable) (lua_State *L, int narr, int nrec);
 
 // copied from lua.c
 static void createargtable (lua_State *L, char **argv, int argc, int script) {
