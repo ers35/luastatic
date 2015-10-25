@@ -7,7 +7,7 @@ Run `make`.
 
 ## Usage
 ```
-$ luastatic hello.lua
+$ ./luastatic hello.lua liblua.a
 $ ./hello
 Hello, world!
 ```
