@@ -11,7 +11,7 @@ lua liblua.a:
 	cp lua-5.2.4/src/liblua.a . 
 	cp lua-5.2.4/src/lua . 
 
-luastatic: liblua.a
+luastatic: lua liblua.a
 	./lua luastatic.lua luastatic.lua liblua.a
 
 hello: luastatic

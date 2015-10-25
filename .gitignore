@@ -1,2 +1,6 @@
 *.lua.c
 *.o
+*.a
+lua
+luac
+luastatic

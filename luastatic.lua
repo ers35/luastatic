@@ -47,10 +47,10 @@ unsigned int %s_lua_len = %u;
 end
 
 local basename = io.popen(("basename %s"):format(infile)):read("*all")
-basename = basename:match("(.+)%.")
+local basename_noextension = basename:match("(.+)%.")
+local basename_underscore = basename_noextension:gsub("%.", "_")
 
 function luaProgramToCData(filename)
-  --~ local basename = filename:match("(.+)%.")
   local f = io.open(filename, "r")
   local strdata = f:read("*all")
   -- load the chunk to check for syntax errors
@@ -61,12 +61,11 @@ function luaProgramToCData(filename)
   end
   local bindata = string.dump(chunk)
   f:close()
-  return binToCData(bindata, basename)
+  return binToCData(bindata, basename_underscore)
 end
 
 local luaprogramcdata = luaProgramToCData(infile)
 
---~ local basename = infile:match("(.+)%.")
 local cprog = ([[
 //#include <lauxlib.h>
 //#include <lua.h>
@@ -127,7 +126,7 @@ main(int argc, char *argv[])
   }
   return 0;
 }
-]]):format(luaprogramcdata, basename, basename, basename)
+]]):format(luaprogramcdata, basename_underscore, basename_underscore, basename_underscore)
 local outfile = io.open(("%s.c"):format(infile), "w+")
 outfile:write(cprog)
 outfile:close()
@@ -137,7 +136,7 @@ do
   -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
   local ccformat 
     = "%s -Os %s.c -rdynamic %s -lm -ldl -o %s"
-  local ccformat = ccformat:format(CC, infile, libluapath, basename)
+  local ccformat = ccformat:format(CC, infile, libluapath, basename_noextension)
   print(ccformat)
   io.popen(ccformat):read("*all")
 end
