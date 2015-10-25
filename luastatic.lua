@@ -68,12 +68,27 @@ local luaprogramcdata = luaProgramToCData(infile)
 
 --~ local basename = infile:match("(.+)%.")
 local cprog = ([[
-#include <lauxlib.h>
-#include <lua.h>
-#include <lualib.h>
+//#include <lauxlib.h>
+//#include <lua.h>
+//#include <lualib.h>
 #include <stdio.h>
 
 %s
+
+// try to avoid having to resolve the Lua include path
+typedef struct lua_State lua_State;
+typedef int (*lua_CFunction) (lua_State *L);
+lua_State *(luaL_newstate) (void);
+const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
+#define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
+#define LUA_MULTRET	(-1)
+#define LUA_OK		0
+int (luaL_loadbufferx) (lua_State *L, const char *buff, size_t sz,
+                                   const char *name, const char *mode);
+#define luaL_loadbuffer(L,s,sz,n)	luaL_loadbufferx(L,s,sz,n,NULL)
+int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
+                            int ctx, lua_CFunction k);
+#define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
 
 // copied from lua.c
 static void createargtable (lua_State *L, char **argv, int argc, int script) {
