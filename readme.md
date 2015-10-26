@@ -10,8 +10,12 @@ Run `make`.
 $ ./luastatic hello.lua liblua.a
 $ ./hello
 Hello, world!
+
+# Statically link with the LuaSQLite3 binary module, but 
+# dynamicaly link with the SQLite3 shared library
+$ ./luastatic sql.lua liblua.a lsqlite3.a -lsqlite3 -pthread
+$ ./sql
 ```
 
 ## TODO
 - Support multiple Lua files
-- Support linking to Lua binary modules

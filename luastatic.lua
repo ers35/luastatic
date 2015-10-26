@@ -1,18 +1,66 @@
 -- The author disclaims copyright to this source code.
 
-local infile = arg[1]
-local libluapath = arg[2]
-if not infile or not libluapath then
-  print("usage: luastatic infile.lua /path/to/liblua.a")
-  os.exit()
+--~ local inspect = require"inspect"
+
+local lua_source_files = {}
+local liblua
+local module_library_files = {}
+local dep_library_files = {}
+local otherflags = {}
+
+function fileExists(name)
+  local f = io.open(name, "r")
+  if f then
+    f:close()
+    return f ~= nil
+  end
+  return false
 end
 
-if libluapath then
-  local f = io.open(libluapath, "r")
-  if not f then
-    print(("liblua.a not found: %s"):format(libluapath))
-    os.exit(1)
+-- parse arguments
+for i, name in ipairs(arg) do
+  local extension = name:match("%.(.+)$")
+  if extension == "lua" or extension == "a" then
+    if not fileExists(name) then
+      print("file does not exist: ", name)
+      os.exit(1)
+    end
+    local info = {}
+    info.name = name
+    info.basename = io.popen(("basename %s"):format(name)):read("*line")
+    info.basename_noextension = info.basename:match("(.+)%.")
+    if extension == "lua" then
+      table.insert(lua_source_files, info)
+    elseif extension == "a" then
+      -- the library is one of three types: liblua.a, a Lua module, or a library dependency
+      local nm = io.popen("nm " .. name)
+      local nmout = nm:read("*all")
+      if not nm:close() then
+        print("nm not found")
+        os.exit(1)
+      end
+      if nmout:find("luaL_newstate") then
+        liblua = info
+      elseif nmout:find(("luaopen_%s"):format(info.basename_noextension)) then
+        table.insert(module_library_files, info)
+      else
+        table.insert(dep_library_files, info)
+      end
+    end
+  else
+    -- forward remaining arguments as flags to cc
+    table.insert(otherflags, name)
   end
+end
+local otherflags_str = table.concat(otherflags, " ")
+
+--~ print(inspect(lua_source_files))
+--~ print(inspect(module_library_files))
+--~ print(otherflags_str)
+
+if #lua_source_files == 0 or liblua == nil then
+  print("usage: luastatic main.lua /path/to/liblua.a")
+  os.exit()
 end
 
 local CC = "cc"
@@ -25,6 +73,7 @@ do
   end
 end
 
+local infile = lua_source_files[1].name
 local infd = io.open(infile, "r")
 if not infd then
   print(("Lua file not found: %s"):format(infile))
@@ -66,6 +115,17 @@ end
 
 local luaprogramcdata = luaProgramToCData(infile)
 
+local module_require = {}
+local module_require_template = [[int luaopen_%s(lua_State *L);
+  luaL_requiref(L, "%s", luaopen_%s, 0);
+  lua_pop(L, 1);
+]]
+for i, v in ipairs(module_library_files) do
+  local noext = v.basename_noextension
+  table.insert(module_require, module_require_template:format(noext, noext, noext))
+end
+local module_requirestr = table.concat(module_require, "\n")
+
 local cprog = ([[
 //#include <lauxlib.h>
 //#include <lua.h>
@@ -93,6 +153,10 @@ int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
                             int ctx, lua_CFunction k);
 #define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
 void  (lua_createtable) (lua_State *L, int narr, int nrec);
+void  (lua_settop) (lua_State *L, int idx);
+#define lua_pop(L,n)		lua_settop(L, -(n)-1)
+void (luaL_requiref) (lua_State *L, const char *modname,
+                                 lua_CFunction openf, int glb);
 
 // copied from lua.c
 static void createargtable (lua_State *L, char **argv, int argc, int script) {
@@ -112,6 +176,9 @@ main(int argc, char *argv[])
 {
   lua_State *L = luaL_newstate();
   luaL_openlibs(L);
+  
+  %s
+  
   if (luaL_loadbuffer(L, (const char*)%s_lua, %s_lua_len, "%s"))
   {
     puts(lua_tostring(L, 1));
@@ -126,7 +193,10 @@ main(int argc, char *argv[])
   }
   return 0;
 }
-]]):format(luaprogramcdata, basename_underscore, basename_underscore, basename_underscore)
+]]):format(
+  luaprogramcdata, module_requirestr, basename_underscore, basename_underscore, 
+  basename_underscore
+)
 local outfile = io.open(("%s.c"):format(infile), "w+")
 outfile:write(cprog)
 outfile:close()
@@ -134,9 +204,19 @@ outfile:close()
 do
   -- statically link Lua, but dynamically link everything else
   -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
+  local linklibs = {}
+  for i, v in ipairs(module_library_files) do
+    table.insert(linklibs, v.name)
+  end
+  for i, v in ipairs(dep_library_files) do
+    table.insert(linklibs, v.name)
+  end
+  local linklibstr = table.concat(linklibs, " ")
   local ccformat 
-    = "%s -Os %s.c -rdynamic %s -lm -ldl -o %s"
-  local ccformat = ccformat:format(CC, infile, libluapath, basename_noextension)
+    = "%s -Os %s.c -rdynamic %s %s -lm -ldl %s -o %s"
+  local ccformat = ccformat:format(
+    CC, infile, liblua.name, linklibstr, otherflags_str, basename_noextension
+  )
   print(ccformat)
   io.popen(ccformat):read("*all")
 end

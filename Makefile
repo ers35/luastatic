@@ -16,6 +16,11 @@ luastatic: lua liblua.a
 
 hello: luastatic
 	./luastatic hello.lua liblua.a
+	
+sql: luastatic
+	@#./luastatic sql.lua liblua.a lsqlite3.a libsqlite3.a
+	lua luastatic.lua test/sql.lua liblua.a test/lsqlite3.a /usr/lib/x86_64-linux-gnu/libsqlite3.a -pthread
+	@#lua luastatic.lua test/sql.lua liblua.a test/lsqlite3.a -pthread -lsqlite3
 
 run: hello
 	./hello
