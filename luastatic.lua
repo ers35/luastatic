@@ -19,7 +19,7 @@ end
 
 -- parse arguments
 for i, name in ipairs(arg) do
-  local extension = name:match("%.(.+)$")
+  local extension = name:match("%.(%a+)$")
   if extension == "lua" or extension == "a" then
     if not fileExists(name) then
       print("file does not exist: ", name)
