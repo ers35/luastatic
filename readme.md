@@ -7,19 +7,20 @@ Run `make`.
 
 ## Usage
 ```
-$ ./luastatic test/hello.lua liblua.a
+$ ./luastatic test/hello.lua liblua.a -Ilua-5.2.4/src
 $ ./hello
 Hello, world!
 
 # Embed a required module by passing it after the main Lua file.
-$ ./luastatic test/require1.lua test/require2.lua liblua.a
+$ ./luastatic test/require1.lua test/require2.lua liblua.a -Ilua-5.2.4/src
 $ ./require1
 
 # Statically link with the LuaSQLite3 binary module, but 
 # dynamicaly link with the SQLite3 shared library
-$ ./luastatic test/sql.lua liblua.a test/lsqlite3.a -lsqlite3 -pthread
+$ ./luastatic test/sql.lua liblua.a test/lsqlite3.a -lsqlite3 -pthread -Ilua-5.2.4/src
 $ ./sql
 ```
 
 ## TODO
 - Support Lua 5.1 and LuaJIT
+- Be able to build https://github.com/ignacio/luagleck

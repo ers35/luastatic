@@ -26,6 +26,17 @@ function binExists(name)
   end
 end
 
+function detectLuaVersion(liblua_)
+  local strings = io.popen("strings " .. liblua_)
+  local stringsout = strings:read("*all")
+  if not strings:close() then
+    print("strings not found")
+    os.exit(1)
+  end
+  local version = stringsout:match("(Lua %d.%d)")
+  return version
+end
+
 -- parse arguments
 for i, name in ipairs(arg) do
   local extension = name:match("%.(%a+)$")
@@ -50,7 +61,7 @@ for i, name in ipairs(arg) do
         print("nm not found")
         os.exit(1)
       end
-      if nmout:find("luaL_newstate") then
+      if nmout:find("T _?luaL_newstate") then
         liblua = info
       elseif nmout:find(("luaopen_%s"):format(info.basename_noextension)) then
         table.insert(module_library_files, info)
@@ -70,10 +81,13 @@ local otherflags_str = table.concat(otherflags, " ")
 --~ print(otherflags_str)
 
 if #lua_source_files == 0 or liblua == nil then
-  print("usage: luastatic main.lua /path/to/liblua.a")
+  print("usage: luastatic main.lua /path/to/liblua.a -I/directory/containing/lua.h/")
   os.exit()
 end
 mainlua = lua_source_files[1]
+
+local lua_version = detectLuaVersion(liblua.name)
+--~ print(("%s detected in %s"):format(lua_version, liblua.basename))
 
 local CC = os.getenv("CC") or "cc"
 if not binExists(CC) then
@@ -106,6 +120,7 @@ end
 function luaProgramToCData(info)
   local f = io.open(info.name, "r")
   local strdata = f:read("*all")
+--[[
   -- load the chunk to check for syntax errors
   local chunk, err = load(strdata)
   if not chunk then
@@ -113,8 +128,9 @@ function luaProgramToCData(info)
     os.exit(1)
   end
   local bindata = string.dump(chunk)
+  --]]
   f:close()
-  return binToCData(bindata, info.basename_underscore)
+  return binToCData(--[[bindata--]]strdata, info.basename_underscore)
 end
 
 local luaprogramcdata = {}
@@ -157,10 +173,10 @@ end
 local bin_module_requirestr = table.concat(bin_module_require, "\n")
 
 local cprog = ([[
+#include <assert.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -269,16 +285,20 @@ do
     table.insert(linklibs, v.name)
   end
   local linklibstr = table.concat(linklibs, " ")
+--[[
   local pkgconfig = {
     "`pkg-config --silence-errors --cflags lua`",
     "`pkg-config --silence-errors --cflags lua5.2`",
   }
+--]]
   local pkgconfigstr = ""
+--[[
   do
     if binExists("pkg-config") then
       pkgconfigstr = table.concat(pkgconfig, " ")
     end
   end
+--]]
   local ccformat 
     = "%s -Os -std=c99 %s.c -rdynamic %s %s %s -lm -ldl %s -o %s"
   local ccformat = ccformat:format(
