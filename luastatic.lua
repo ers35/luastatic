@@ -2,6 +2,7 @@
 
 --~ local inspect = require"inspect"
 
+local mainlua
 local lua_source_files = {}
 local liblua
 local module_library_files = {}
@@ -17,6 +18,14 @@ function fileExists(name)
   return false
 end
 
+function binExists(name)
+  do
+    local f = io.popen(name .. " --version")
+    f:read("*all")
+    return f:close()
+  end
+end
+
 -- parse arguments
 for i, name in ipairs(arg) do
   local extension = name:match("%.(%a+)$")
@@ -29,6 +38,8 @@ for i, name in ipairs(arg) do
     info.name = name
     info.basename = io.popen(("basename %s"):format(name)):read("*line")
     info.basename_noextension = info.basename:match("(.+)%.")
+    info.basename_underscore = info.basename_noextension:gsub("%.", "_")
+    info.basename_underscore = info.basename_underscore:gsub("%-", "_")
     if extension == "lua" then
       table.insert(lua_source_files, info)
     elseif extension == "a" then
@@ -62,15 +73,12 @@ if #lua_source_files == 0 or liblua == nil then
   print("usage: luastatic main.lua /path/to/liblua.a")
   os.exit()
 end
+mainlua = lua_source_files[1]
 
-local CC = "cc"
-do
-  local f = io.popen(CC .. " --version")
-  f:read("*all")
-  if not f:close() then
-    print("C compiler not found.")
-    os.exit(1)
-  end
+local CC = os.getenv("CC") or "cc"
+if not binExists(CC) then
+  print("C compiler not found.")
+  os.exit(1)
 end
 
 local infile = lua_source_files[1].name
@@ -95,12 +103,8 @@ unsigned int %s_lua_len = %u;
   return fmt:format(name, hexstr, name, #bindata)
 end
 
-local basename = io.popen(("basename %s"):format(infile)):read("*all")
-local basename_noextension = basename:match("(.+)%.")
-local basename_underscore = basename_noextension:gsub("%.", "_")
-
-function luaProgramToCData(filename)
-  local f = io.open(filename, "r")
+function luaProgramToCData(info)
+  local f = io.open(info.name, "r")
   local strdata = f:read("*all")
   -- load the chunk to check for syntax errors
   local chunk, err = load(strdata)
@@ -110,53 +114,60 @@ function luaProgramToCData(filename)
   end
   local bindata = string.dump(chunk)
   f:close()
-  return binToCData(bindata, basename_underscore)
+  return binToCData(bindata, info.basename_underscore)
 end
 
-local luaprogramcdata = luaProgramToCData(infile)
+local luaprogramcdata = {}
+local lua_module_require = {}
+local lua_module_require_template = [[struct module
+{
+  char *name;
+  unsigned char *buf;
+  unsigned int len;
+} lua_bundle[] = 
+{
+%s
+};
+]]
+for i, v in ipairs(lua_source_files) do
+  table.insert(luaprogramcdata, luaProgramToCData(v))
+  if i > 1 then
+    -- ignore main.lua
+  table.insert(lua_module_require, 
+    ("\t{\"%s\", %s_lua, sizeof(%s_lua)},\n"):format(
+      v.basename_noextension, v.basename_noextension, v.basename_noextension
+    )
+  )
+  end
+end
+local lua_module_requirestr = lua_module_require_template:format(
+  table.concat(lua_module_require, "\n")
+)
+local luaprogramcdatastr = table.concat(luaprogramcdata, "\n")
 
-local module_require = {}
-local module_require_template = [[int luaopen_%s(lua_State *L);
+local bin_module_require = {}
+local bin_module_require_template = [[int luaopen_%s(lua_State *L);
   luaL_requiref(L, "%s", luaopen_%s, 0);
   lua_pop(L, 1);
 ]]
 for i, v in ipairs(module_library_files) do
   local noext = v.basename_noextension
-  table.insert(module_require, module_require_template:format(noext, noext, noext))
+  table.insert(bin_module_require, bin_module_require_template:format(noext, noext, noext))
 end
-local module_requirestr = table.concat(module_require, "\n")
+local bin_module_requirestr = table.concat(bin_module_require, "\n")
 
 local cprog = ([[
-//#include <lauxlib.h>
-//#include <lua.h>
-//#include <lualib.h>
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define arraylen(array) (sizeof(array) / sizeof(array[0]))
 
 %s
-
-// try to avoid having to resolve the Lua include path
-typedef struct lua_State lua_State;
-typedef int (*lua_CFunction) (lua_State *L);
-lua_State *(luaL_newstate) (void);
-void (luaL_openlibs) (lua_State *L);
-const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
-#define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
-const char *(lua_pushstring) (lua_State *L, const char *s);
-void  (lua_setglobal) (lua_State *L, const char *var);
-void  (lua_rawseti) (lua_State *L, int idx, int n);
-#define LUA_MULTRET	(-1)
-#define LUA_OK		0
-int (luaL_loadbufferx) (lua_State *L, const char *buff, size_t sz,
-                                   const char *name, const char *mode);
-#define luaL_loadbuffer(L,s,sz,n)	luaL_loadbufferx(L,s,sz,n,NULL)
-int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
-                            int ctx, lua_CFunction k);
-#define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
-void  (lua_createtable) (lua_State *L, int narr, int nrec);
-void  (lua_settop) (lua_State *L, int idx);
-#define lua_pop(L,n)		lua_settop(L, -(n)-1)
-void (luaL_requiref) (lua_State *L, const char *modname,
-                                 lua_CFunction openf, int glb);
 
 // copied from lua.c
 static void createargtable (lua_State *L, char **argv, int argc, int script) {
@@ -171,11 +182,57 @@ static void createargtable (lua_State *L, char **argv, int argc, int script) {
   lua_setglobal(L, "arg");
 }
 
+%s
+
+// try to load the module from lua_bundle when require() is called
+static int
+lua_loader(lua_State *l)
+{
+  size_t len;
+  const char *modname = lua_tolstring(l, -1, &len);
+  //printf("%%i %%.*s\n", (unsigned)len, (int)len, modname);
+  struct module *mod = NULL;
+  for (int i = 0; i < arraylen(lua_bundle); ++i)
+  {
+    if (memcmp(modname, lua_bundle[i].name, len) == 0)
+    {
+      mod = &lua_bundle[i];
+    }
+  }
+  if (!mod)
+  {
+    lua_pushnil(l);
+    return 1;
+  }
+  if (luaL_loadbuffer(l, (const char*)mod->buf, mod->len, mod->name) != LUA_OK)
+  {
+    printf("luaL_loadstring: %%s", lua_tostring(l, 1));
+    exit(1);
+  }
+  return 1;
+}
+
 int
 main(int argc, char *argv[])
 {
   lua_State *L = luaL_newstate();
   luaL_openlibs(L);
+  
+  // add loader to package.searchers
+  lua_getglobal(L, "table");
+  lua_getfield(L, -1, "insert");
+  // remove "table"
+  lua_remove(L, -2);
+  assert(lua_isfunction(L, -1));
+  lua_getglobal(L, "package");
+  lua_getfield(L, -1, "searchers");
+  // remove package table from the stack
+  lua_remove(L, -2);
+  //lua_pushcfunction(L, lua_searcher);
+  lua_pushcfunction(L, lua_loader);
+  // table.insert(package.searchers, lua_searcher);
+  lua_call(L, 2, 0);
+  assert(lua_gettop(L) == 0);
   
   %s
   
@@ -194,8 +251,8 @@ main(int argc, char *argv[])
   return 0;
 }
 ]]):format(
-  luaprogramcdata, module_requirestr, basename_underscore, basename_underscore, 
-  basename_underscore
+  luaprogramcdatastr, lua_module_requirestr, bin_module_requirestr, 
+  mainlua.basename_underscore, mainlua.basename_underscore, mainlua.basename_underscore
 )
 local outfile = io.open(("%s.c"):format(infile), "w+")
 outfile:write(cprog)
@@ -212,10 +269,21 @@ do
     table.insert(linklibs, v.name)
   end
   local linklibstr = table.concat(linklibs, " ")
+  local pkgconfig = {
+    "`pkg-config --silence-errors --cflags lua`",
+    "`pkg-config --silence-errors --cflags lua5.2`",
+  }
+  local pkgconfigstr = ""
+  do
+    if binExists("pkg-config") then
+      pkgconfigstr = table.concat(pkgconfig, " ")
+    end
+  end
   local ccformat 
-    = "%s -Os %s.c -rdynamic %s %s -lm -ldl %s -o %s"
+    = "%s -Os -std=c99 %s.c -rdynamic %s %s %s -lm -ldl %s -o %s"
   local ccformat = ccformat:format(
-    CC, infile, liblua.name, linklibstr, otherflags_str, basename_noextension
+    CC, infile, liblua.name, pkgconfigstr, linklibstr, otherflags_str, 
+    mainlua.basename_noextension
   )
   print(ccformat)
   io.popen(ccformat):read("*all")
