@@ -28,12 +28,15 @@ sql: luastatic
 	/usr/lib/x86_64-linux-gnu/libsqlite3.a -pthread -I../lua-$(LUA_VERSION)/src
 require1: luastatic
 	cd test && ../luastatic require1.lua require2.lua ../liblua.a -I../lua-$(LUA_VERSION)/src
+subdir: luastatic
+	cd test && ../luastatic subdir.lua subdirectory/test.lua ../liblua.a -I../lua-$(LUA_VERSION)/src
 
-test: hello multiple.dots hypen- require1
+test: hello multiple.dots hypen- require1 subdir
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-
 	./test/require1
+	./test/subdir
 
 clean:
 	cd lua-$(LUA_VERSION) && make clean
