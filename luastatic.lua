@@ -86,7 +86,7 @@ if #lua_source_files == 0 or liblua == nil then
 end
 mainlua = lua_source_files[1]
 
-local lua_version = detectLuaVersion(liblua.name)
+--~ local lua_version = detectLuaVersion(liblua.name)
 --~ print(("%s detected in %s"):format(lua_version, liblua.basename))
 
 local CC = os.getenv("CC") or "cc"
@@ -95,42 +95,13 @@ if not binExists(CC) then
   os.exit(1)
 end
 
-local infile = lua_source_files[1].name
-local infd = io.open(infile, "r")
-if not infd then
-  print(("Lua file not found: %s"):format(infile))
-  os.exit(1)
-end
-
-function binToCData(bindata, name)
-  local fmt = [[
-unsigned char %s_lua[] = {
-%s
-};
-unsigned int %s_lua_len = %u;
-]]
+function binToHexString(bindata, name)
   local hex = {}
   for b in bindata:gmatch"." do
     table.insert(hex, ("0x%02x"):format(string.byte(b)))
   end
   local hexstr = table.concat(hex, ", ")
-  return fmt:format(name, hexstr, name, #bindata)
-end
-
-function luaProgramToCData(info)
-  local f = io.open(info.name, "r")
-  local strdata = f:read("*all")
---[[
-  -- load the chunk to check for syntax errors
-  local chunk, err = load(strdata)
-  if not chunk then
-    print(("load: %s"):format(err))
-    os.exit(1)
-  end
-  local bindata = string.dump(chunk)
-  --]]
-  f:close()
-  return binToCData(--[[bindata--]]strdata, info.basename_underscore)
+  return hexstr
 end
 
 local luaprogramcdata = {}
@@ -146,15 +117,19 @@ local lua_module_require_template = [[struct module
 };
 ]]
 for i, v in ipairs(lua_source_files) do
-  table.insert(luaprogramcdata, luaProgramToCData(v))
-  if i > 1 then
-    -- ignore main.lua
+  local f = io.open(v.name, "r")
+  local strdata = f:read("*all")
+  local hexstr = binToHexString(strdata)
+  f:close()
+  local fmt = [[
+static unsigned char lua_require_%s[] = {%s};
+  ]]
+  table.insert(luaprogramcdata, fmt:format(i, hexstr))
   table.insert(lua_module_require, 
-    ("\t{\"%s\", %s_lua, sizeof(%s_lua)},\n"):format(
-      v.basename_noextension, v.basename_noextension, v.basename_noextension
+    ("\t{\"%s\", lua_require_%s, %s},"):format(
+      v.name:gsub("/", "."):gsub(".lua", ""), i, #strdata
     )
   )
-  end
 end
 local lua_module_requirestr = lua_module_require_template:format(
   table.concat(lua_module_require, "\n")
@@ -204,19 +179,21 @@ static void createargtable (lua_State *L, char **argv, int argc, int script) {
 static int
 lua_loader(lua_State *l)
 {
-  size_t len;
-  const char *modname = lua_tolstring(l, -1, &len);
-  //printf("%%i %%.*s\n", (unsigned)len, (int)len, modname);
+  size_t namelen;
+  const char *modname = lua_tolstring(l, -1, &namelen);
+  //printf("lua_loader: %%i %%.*s\n", (unsigned)namelen, (int)namelen, modname);
   struct module *mod = NULL;
   for (int i = 0; i < arraylen(lua_bundle); ++i)
   {
-    if (memcmp(modname, lua_bundle[i].name, len) == 0)
+    if (namelen == strlen(lua_bundle[i].name) && memcmp(modname, lua_bundle[i].name, namelen) == 0)
     {
       mod = &lua_bundle[i];
+      break;
     }
   }
   if (!mod)
   {
+    printf("module not found: %%s\n", modname);
     lua_pushnil(l);
     return 1;
   }
@@ -252,7 +229,7 @@ main(int argc, char *argv[])
   
   %s
   
-  if (luaL_loadbuffer(L, (const char*)%s_lua, %s_lua_len, "%s"))
+  if (luaL_loadbuffer(L, (const char*)lua_bundle[0].buf, lua_bundle[0].len, "%s"))
   {
     puts(lua_tostring(L, 1));
     return 1;
@@ -268,14 +245,14 @@ main(int argc, char *argv[])
 }
 ]]):format(
   luaprogramcdatastr, lua_module_requirestr, bin_module_requirestr, 
-  mainlua.basename_underscore, mainlua.basename_underscore, mainlua.basename_underscore
+  mainlua.basename_underscore
 )
+local infile = lua_source_files[1].name
 local outfile = io.open(("%s.c"):format(infile), "w+")
 outfile:write(cprog)
 outfile:close()
 
 do
-  -- statically link Lua, but dynamically link everything else
   -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
   local linklibs = {}
   for i, v in ipairs(module_library_files) do

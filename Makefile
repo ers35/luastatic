@@ -18,25 +18,22 @@ luastatic: lua liblua.a
 	./lua luastatic.lua luastatic.lua liblua.a -Ilua-$(LUA_VERSION)/src
 
 hello: luastatic
-	./luastatic test/hello.lua liblua.a -Ilua-$(LUA_VERSION)/src
+	cd test && ../luastatic hello.lua ../liblua.a -I../lua-$(LUA_VERSION)/src
 multiple.dots: luastatic
-	./luastatic test/multiple.dots.lua liblua.a -Ilua-$(LUA_VERSION)/src
+	cd test && ../luastatic multiple.dots.lua ../liblua.a -I../lua-$(LUA_VERSION)/src
 hypen-: luastatic
-	./luastatic test/hypen-.lua liblua.a -Ilua-$(LUA_VERSION)/src
+	cd test && ../luastatic hypen-.lua ../liblua.a -I../lua-$(LUA_VERSION)/src
 sql: luastatic
-	./lua luastatic.lua test/sql.lua liblua.a test/lsqlite3.a \
-	/usr/lib/x86_64-linux-gnu/libsqlite3.a -pthread -Ilua-$(LUA_VERSION)/src
+	cd test && ../luastatic sql.lua ../liblua.a lsqlite3.a \
+	/usr/lib/x86_64-linux-gnu/libsqlite3.a -pthread -I../lua-$(LUA_VERSION)/src
 require1: luastatic
-	./lua luastatic.lua test/require1.lua test/require2.lua liblua.a -Ilua-$(LUA_VERSION)/src
+	cd test && ../luastatic require1.lua require2.lua ../liblua.a -I../lua-$(LUA_VERSION)/src
 
 test: hello multiple.dots hypen- require1
-	./hello
-	./multiple.dots
-	./hypen-
-	./require1
-
-run: hello
-	./hello
+	./test/hello
+	./test/multiple.dots
+	./test/hypen-
+	./test/require1
 
 clean:
 	cd lua-$(LUA_VERSION) && make clean
