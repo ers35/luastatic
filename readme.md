@@ -3,7 +3,7 @@ Lua C API, and builds that program to an executable. The executable runs on syst
 do not have Lua installed because it contains the Lua interpreter.
 
 ## Building
-Run `make`.
+Run `make`
 
 ## Usage
 ```
@@ -28,7 +28,6 @@ $ luastatic main.lua display.lua logger.lua machine.lua port.lua z80.lua \
   file_format/*.lua machine/spectrum_48.lua opcodes/*.lua liblua.a SDL.a -Ilua-5.3.1/src \
   -lSDL2
 $ ./main
-
 ```
 
 ## Arguments
@@ -42,4 +41,4 @@ luastatic main.lua[1] require.lua[2] liblua.a[3] module.a[4] -Iinclude/lua[5]
 ```
 
 ## TODO
-- Support Lua 5.1 and LuaJIT
+- Improve support for Lua 5.1 and LuaJIT

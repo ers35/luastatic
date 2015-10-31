@@ -121,9 +121,7 @@ for i, v in ipairs(lua_source_files) do
   local strdata = f:read("*all")
   local hexstr = binToHexString(strdata)
   f:close()
-  local fmt = [[
-static unsigned char lua_require_%s[] = {%s};
-  ]]
+  local fmt = [[static unsigned char lua_require_%s[] = {%s};]]
   table.insert(luaprogramcdata, fmt:format(i, hexstr))
   table.insert(lua_module_require, 
     ("\t{\"%s\", lua_require_%s, %s},"):format(
@@ -156,22 +154,13 @@ local cprog = ([[
 #include <stdlib.h>
 #include <string.h>
 
+#if LUA_VERSION_NUM == 501
+  #define LUA_OK 0
+#endif
+
 #define arraylen(array) (sizeof(array) / sizeof(array[0]))
 
 %s
-
-// copied from lua.c
-static void createargtable (lua_State *L, char **argv, int argc, int script) {
-  int i, narg;
-  if (script == argc) script = 0;  /* no script name? */
-  narg = argc - (script + 1);  /* number of positive indices */
-  lua_createtable(L, narg, script + 1);
-  for (i = 0; i < argc; i++) {
-    lua_pushstring(L, argv[i]);
-    lua_rawseti(L, -2, i - script);
-  }
-  lua_setglobal(L, "arg");
-}
 
 %s
 
@@ -205,6 +194,19 @@ lua_loader(lua_State *l)
   return 1;
 }
 
+// copied from lua.c
+static void createargtable (lua_State *L, char **argv, int argc, int script) {
+  int i, narg;
+  if (script == argc) script = 0;  /* no script name? */
+  narg = argc - (script + 1);  /* number of positive indices */
+  lua_createtable(L, narg, script + 1);
+  for (i = 0; i < argc; i++) {
+    lua_pushstring(L, argv[i]);
+    lua_rawseti(L, -2, i - script);
+  }
+  lua_setglobal(L, "arg");
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -218,7 +220,11 @@ main(int argc, char *argv[])
   lua_remove(L, -2);
   assert(lua_isfunction(L, -1));
   lua_getglobal(L, "package");
+#if LUA_VERSION_NUM == 501
+  lua_getfield(L, -1, "loaders");
+#else
   lua_getfield(L, -1, "searchers");
+#endif
   // remove package table from the stack
   lua_remove(L, -2);
   //lua_pushcfunction(L, lua_searcher);

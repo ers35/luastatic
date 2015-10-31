@@ -2,6 +2,7 @@
 # make CC="musl-gcc"
 # make CC="clang"
 
+#LUA_VERSION ?= 5.1.5
 LUA_VERSION ?= 5.2.4
 #LUA_VERSION ?= 5.3.1
 
