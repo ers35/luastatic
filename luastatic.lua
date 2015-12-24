@@ -1,7 +1,5 @@
 -- The author disclaims copyright to this source code.
 
---~ local inspect = require"inspect"
-
 local mainlua
 local lua_source_files = {}
 local liblua
@@ -24,17 +22,6 @@ function binExists(name)
     f:read("*all")
     return f:close()
   end
-end
-
-function detectLuaVersion(liblua_)
-  local strings = io.popen("strings " .. liblua_)
-  local stringsout = strings:read("*all")
-  if not strings:close() then
-    print("strings not found")
-    os.exit(1)
-  end
-  local version = stringsout:match("(Lua %d.%d)")
-  return version
 end
 
 -- parse arguments
@@ -76,18 +63,11 @@ for i, name in ipairs(arg) do
 end
 local otherflags_str = table.concat(otherflags, " ")
 
---~ print(inspect(lua_source_files))
---~ print(inspect(module_library_files))
---~ print(otherflags_str)
-
 if #lua_source_files == 0 or liblua == nil then
   print("usage: luastatic main.lua /path/to/liblua.a -I/directory/containing/lua.h/")
   os.exit()
 end
 mainlua = lua_source_files[1]
-
---~ local lua_version = detectLuaVersion(liblua.name)
---~ print(("%s detected in %s"):format(lua_version, liblua.basename))
 
 local CC = os.getenv("CC") or "cc"
 if not binExists(CC) then
@@ -227,9 +207,8 @@ main(int argc, char *argv[])
 #endif
   // remove package table from the stack
   lua_remove(L, -2);
-  //lua_pushcfunction(L, lua_searcher);
   lua_pushcfunction(L, lua_loader);
-  // table.insert(package.searchers, lua_searcher);
+  // table.insert(package.searchers, lua_loader);
   lua_call(L, 2, 0);
   assert(lua_gettop(L) == 0);
   
@@ -268,24 +247,10 @@ do
     table.insert(linklibs, v.name)
   end
   local linklibstr = table.concat(linklibs, " ")
---[[
-  local pkgconfig = {
-    "`pkg-config --silence-errors --cflags lua`",
-    "`pkg-config --silence-errors --cflags lua5.2`",
-  }
---]]
-  local pkgconfigstr = ""
---[[
-  do
-    if binExists("pkg-config") then
-      pkgconfigstr = table.concat(pkgconfig, " ")
-    end
-  end
---]]
   local ccformat 
-    = "%s -Os -std=c99 %s.c -rdynamic %s %s %s -lm -ldl %s -o %s"
+    = "%s -Os -std=c99 %s.c -rdynamic %s %s -lm -ldl %s -o %s"
   local ccformat = ccformat:format(
-    CC, infile, liblua.name, pkgconfigstr, linklibstr, otherflags_str, 
+    CC, infile, liblua.name, linklibstr, otherflags_str, 
     mainlua.basename_noextension
   )
   print(ccformat)
