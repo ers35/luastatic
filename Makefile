@@ -32,6 +32,9 @@ require1: luastatic
 subdir: luastatic
 	cd test && ../luastatic subdir.lua subdirectory/test.lua ../liblua.a -I../lua-$(LUA_VERSION)/src
 
+# mingw
+# CC=x86_64-w64-mingw32-gcc lua luastatic.lua test/hello.lua /usr/x86_64-w64-mingw32/lib/liblua5.2.a -Ilua-5.2.4/src/
+
 test: hello multiple.dots hypen- require1 subdir
 	./test/hello
 	./test/multiple.dots

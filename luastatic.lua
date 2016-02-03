@@ -17,11 +17,21 @@ function fileExists(name)
 end
 
 function binExists(name)
-  do
-    local f = io.popen(name .. " --version")
-    f:read("*all")
-    return f:close()
+  local f = io.popen(name .. " --version")
+  local str = f:read("*all")
+  if f:close() then
+    return str
   end
+  return nil
+end
+
+function dumpmachine(cc)
+  local f = io.popen(cc .. " -dumpmachine")
+  local str = f:read("*all")
+  if f:close() then
+    return str
+  end
+  return nil
 end
 
 -- parse arguments
@@ -248,10 +258,18 @@ do
   end
   local linklibstr = table.concat(linklibs, " ")
   local ccformat 
-    = "%s -Os -std=c99 %s.c -rdynamic %s %s -lm -ldl %s -o %s"
-  local ccformat = ccformat:format(
-    CC, infile, liblua.name, linklibstr, otherflags_str, 
-    mainlua.basename_noextension
+    = "%s -Os -std=c99 %s.c %s %s %s -lm %s %s -o %s%s"
+  local rdynamic = "-rdynamic"
+  local ldl = "-ldl"
+  local binary_extension = ""
+  if dumpmachine(CC):match"mingw" then
+    rdynamic = ""
+    ldl = ""
+    binary_extension = ".exe"
+  end
+  ccformat = ccformat:format(
+    CC, infile, liblua.name, rdynamic, ldl, linklibstr, otherflags_str, 
+    mainlua.basename_noextension, binary_extension
   )
   print(ccformat)
   io.popen(ccformat):read("*all")
