@@ -172,7 +172,7 @@ lua_loader(lua_State *l)
   }
   if (!mod)
   {
-    printf("module not found: %%s\n", modname);
+    //printf("module not found: %%s\n", modname);
     lua_pushnil(l);
     return 1;
   }
