@@ -115,7 +115,7 @@ for i, v in ipairs(lua_source_files) do
   table.insert(luaprogramcdata, fmt:format(i, hexstr))
   table.insert(lua_module_require, 
     ("\t{\"%s\", lua_require_%s, %s},"):format(
-      v.name:gsub("/", "."):gsub(".lua", ""), i, #strdata
+      v.name:gsub("/", "."):gsub("%.lua$", ""), i, #strdata
     )
   )
 end
