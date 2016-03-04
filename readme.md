@@ -32,12 +32,13 @@ $ ./main
 
 ## Arguments
 ```
-luastatic main.lua[1] require.lua[2] liblua.a[3] module.a[4] -Iinclude/lua[5]
+luastatic main.lua[1] require.lua[2] liblua.a[3] module.a[4] -Iinclude/lua[5] [6]
 [1]: The entry point to the Lua program
 [2]: One or more required Lua source files
 [3]: The Lua intepreter static library
 [4]: One or more static libraries for a required Lua binary module
 [5]: The path to the directory containing lua.h
+[6]: Additional arguments are passed to the C compiler
 ```
 
 ## TODO
