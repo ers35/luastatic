@@ -179,6 +179,7 @@ lua_loader(lua_State *l)
   if (luaL_loadbuffer(l, (const char*)mod->buf, mod->len, mod->name) != LUA_OK)
   {
     printf("luaL_loadstring: %%s", lua_tostring(l, 1));
+    lua_close(l);
     exit(1);
   }
   return 1;
@@ -227,6 +228,7 @@ main(int argc, char *argv[])
   if (luaL_loadbuffer(L, (const char*)lua_bundle[0].buf, lua_bundle[0].len, "%s"))
   {
     puts(lua_tostring(L, 1));
+    lua_close(L);
     return 1;
   }
   createargtable(L, argv, argc, 0);
@@ -234,8 +236,10 @@ main(int argc, char *argv[])
   if (err != LUA_OK)
   {
     puts(lua_tostring(L, 1));
+    lua_close(L);
     return 1;
   }
+  lua_close(L);
   return 0;
 }
 ]]):format(
