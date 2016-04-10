@@ -109,6 +109,20 @@ local lua_module_require_template = [[struct module
 for i, v in ipairs(lua_source_files) do
   local f = io.open(v.name, "r")
   local strdata = f:read("*all")
+  if strdata:sub(1, 3) == "\xef\xbb\xbf" then
+    -- strip the byte order mark
+    strdata = strdata:sub(4)
+  end
+  if strdata:sub(1, 1) == '#' then
+    local newline = strdata:find("\n")
+    if newline then
+      -- strip the shebang on the first line
+      strdata = strdata:sub(newline + 1)
+    else
+      -- EOF before newline
+      strdata = ""
+    end
+  end
   local hexstr = binToHexString(strdata)
   f:close()
   local fmt = [[static unsigned char lua_require_%s[] = {%s};]]
