@@ -6,7 +6,7 @@ static const luaL_Reg binmodule_dotslib[] = {
   {NULL, NULL},
 };
 
-LUALIB_API luaopen_binmodule_dots(lua_State *L)
+LUALIB_API int luaopen_binmodule_dots(lua_State *L)
 {
   luaL_newlib(L, binmodule_dotslib);
   return 1;
