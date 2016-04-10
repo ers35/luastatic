@@ -130,8 +130,9 @@ local bin_module_require_template = [[int luaopen_%s(lua_State *L);
   lua_pop(L, 1);
 ]]
 for i, v in ipairs(module_library_files) do
-  local noext = v.basename_noextension
-  table.insert(bin_module_require, bin_module_require_template:format(noext, noext, noext))
+  table.insert(bin_module_require, bin_module_require_template:format(
+    v.basename_underscore, v.basename_noextension, v.basename_underscore)
+  )
 end
 local bin_module_requirestr = table.concat(bin_module_require, "\n")
 
