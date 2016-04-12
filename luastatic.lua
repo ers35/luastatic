@@ -1,3 +1,5 @@
+#!/usr/bin/env lua
+
 -- The author disclaims copyright to this source code.
 
 local mainlua
