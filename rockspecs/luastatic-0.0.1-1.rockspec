@@ -1,13 +1,16 @@
 package = "luastatic"
-version = "scm-1"
+version = "0.0.1-1"
 source =
 {
   url = "git://github.com/ers35/luastatic.git",
-  branch = "master"
+  tag = "0.0.1",
 }
 description =
 {
   summary = "Build a standalone executable from a Lua program.",
+  detailed = [[
+    See http://lua.space/tools/build-a-standalone-executable for more information.
+  ]],
   homepage = "https://www.github.com/ers35/luastatic",
   license = "CC0",
   maintainer = "Eric R. Schulz <eric@ers35.com>"
