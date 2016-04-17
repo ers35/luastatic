@@ -81,12 +81,6 @@ if #lua_source_files == 0 or liblua == nil then
 end
 mainlua = lua_source_files[1]
 
-local CC = os.getenv("CC") or "cc"
-if not binExists(CC) then
-  print("C compiler not found.")
-  os.exit(1)
-end
-
 function binToHexString(bindata, name)
   local hex = {}
   for b in bindata:gmatch"." do
@@ -267,6 +261,12 @@ local infile = lua_source_files[1].name
 local outfile = io.open(("%s.c"):format(infile), "w+")
 outfile:write(cprog)
 outfile:close()
+
+local CC = os.getenv("CC") or "cc"
+if not binExists(CC) then
+  print("C compiler not found.")
+  os.exit(1)
+end
 
 do
   -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
