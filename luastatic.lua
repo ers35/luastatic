@@ -18,17 +18,8 @@ function fileExists(name)
   return false
 end
 
-function binExists(name)
-  local f = io.popen(name .. " --version")
-  local str = f:read("*all")
-  if f:close() then
-    return str
-  end
-  return nil
-end
-
-function dumpmachine(cc)
-  local f = io.popen(cc .. " -dumpmachine")
+local function shellout(cmd)
+  local f = io.popen(cmd)
   local str = f:read("*all")
   if f:close() then
     return str
@@ -53,10 +44,10 @@ for i, name in ipairs(arg) do
     if extension == "lua" then
       table.insert(lua_source_files, info)
     elseif extension == "a" then
-      -- the library is one of three types: liblua.a, a Lua module, or a library dependency
-      local nm = io.popen("nm " .. name)
-      local nmout = nm:read("*all")
-      if not nm:close() then
+      -- the library is one of three types: liblua.a, a Lua module, 
+      -- or a library dependency
+      local nmout = shellout("nm " .. name)
+      if not nmout then
         print("nm not found")
         os.exit(1)
       end
@@ -263,13 +254,12 @@ outfile:write(cprog)
 outfile:close()
 
 local CC = os.getenv("CC") or "cc"
-if not binExists(CC) then
+if not shellout(CC .. " --version") then
   print("C compiler not found.")
   os.exit(1)
 end
 
 do
-  -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
   local linklibs = {}
   for i, v in ipairs(module_library_files) do
     table.insert(linklibs, v.name)
@@ -278,20 +268,20 @@ do
     table.insert(linklibs, v.name)
   end
   local linklibstr = table.concat(linklibs, " ")
-  local ccformat 
-    = "%s -Os -std=c99 %s.c %s %s %s -lm %s %s -o %s%s"
+  local ccformat = "%s -Os -std=c99 %s.c %s %s %s -lm %s %s -o %s%s"
+  -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
   local rdynamic = "-rdynamic"
   local ldl = "-ldl"
   local binary_extension = ""
-  if dumpmachine(CC):match"mingw" then
+  if shellout(CC .. " -dumpmachine"):match("mingw") then
     rdynamic = ""
     ldl = ""
     binary_extension = ".exe"
   end
-  ccformat = ccformat:format(
+  local ccstr = ccformat:format(
     CC, infile, liblua.name, rdynamic, ldl, linklibstr, otherflags_str, 
     mainlua.basename_noextension, binary_extension
   )
-  print(ccformat)
-  io.popen(ccformat):read("*all")
+  print(ccstr)
+  shellout(ccstr)
 end
