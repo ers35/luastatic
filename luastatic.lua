@@ -9,11 +9,11 @@ local module_library_files = {}
 local dep_library_files = {}
 local otherflags = {}
 
-function fileExists(name)
+local function fileExists(name)
   local f = io.open(name, "r")
   if f then
     f:close()
-    return f ~= nil
+    return true
   end
   return false
 end
@@ -35,12 +35,14 @@ for i, name in ipairs(arg) do
       print("file does not exist: ", name)
       os.exit(1)
     end
+
     local info = {}
     info.name = name
-    info.basename = io.popen(("basename %s"):format(name)):read("*line")
+    info.basename = io.popen("basename " .. name):read("*line")
     info.basename_noextension = info.basename:match("(.+)%.")
     info.basename_underscore = info.basename_noextension:gsub("%.", "_")
     info.basename_underscore = info.basename_underscore:gsub("%-", "_")
+
     if extension == "lua" then
       table.insert(lua_source_files, info)
     elseif extension == "a" then
@@ -53,7 +55,7 @@ for i, name in ipairs(arg) do
       end
       if nmout:find("T _?luaL_newstate") then
         liblua = info
-      elseif nmout:find(("luaopen_%s"):format(info.basename_noextension)) then
+      elseif nmout:find("luaopen_" .. info.basename_noextension) then
         table.insert(module_library_files, info)
       else
         table.insert(dep_library_files, info)
@@ -72,7 +74,7 @@ if #lua_source_files == 0 or liblua == nil then
 end
 mainlua = lua_source_files[1]
 
-function binToHexString(bindata, name)
+local function binToHexString(bindata)
   local hex = {}
   for b in bindata:gmatch"." do
     table.insert(hex, ("0x%02x"):format(string.byte(b)))
@@ -96,6 +98,7 @@ local lua_module_require_template = [[struct module
 for i, v in ipairs(lua_source_files) do
   local f = io.open(v.name, "r")
   local strdata = f:read("*all")
+  f:close()
   if strdata:sub(1, 3) == "\xef\xbb\xbf" then
     -- strip the byte order mark
     strdata = strdata:sub(4)
@@ -111,7 +114,6 @@ for i, v in ipairs(lua_source_files) do
     end
   end
   local hexstr = binToHexString(strdata)
-  f:close()
   local fmt = [[static unsigned char lua_require_%s[] = {%s};]]
   table.insert(luaprogramcdata, fmt:format(i, hexstr))
   table.insert(lua_module_require, 
@@ -157,8 +159,7 @@ local cprog = ([[
 %s
 
 // try to load the module from lua_bundle when require() is called
-static int
-lua_loader(lua_State *l)
+static int lua_loader(lua_State *l)
 {
   size_t namelen;
   const char *modname = lua_tolstring(l, -1, &namelen);
@@ -180,7 +181,7 @@ lua_loader(lua_State *l)
   }
   if (luaL_loadbuffer(l, (const char*)mod->buf, mod->len, mod->name) != LUA_OK)
   {
-    printf("luaL_loadstring: %%s", lua_tostring(l, 1));
+    printf("luaL_loadstring: %%s\n", lua_tostring(l, 1));
     lua_close(l);
     exit(1);
   }
@@ -200,8 +201,7 @@ static void createargtable (lua_State *L, char **argv, int argc, int script) {
   lua_setglobal(L, "arg");
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
   lua_State *L = luaL_newstate();
   luaL_openlibs(L);
@@ -248,8 +248,8 @@ main(int argc, char *argv[])
   luaprogramcdatastr, lua_module_requirestr, bin_module_requirestr, 
   mainlua.basename_underscore
 )
-local infile = lua_source_files[1].name
-local outfile = io.open(("%s.c"):format(infile), "w+")
+local infilename = lua_source_files[1].name
+local outfile = io.open(infilename .. ".c", "w+")
 outfile:write(cprog)
 outfile:close()
 
@@ -259,29 +259,27 @@ if not shellout(CC .. " --version") then
   os.exit(1)
 end
 
-do
-  local linklibs = {}
-  for i, v in ipairs(module_library_files) do
-    table.insert(linklibs, v.name)
-  end
-  for i, v in ipairs(dep_library_files) do
-    table.insert(linklibs, v.name)
-  end
-  local linklibstr = table.concat(linklibs, " ")
-  local ccformat = "%s -Os -std=c99 %s.c %s %s %s -lm %s %s -o %s%s"
-  -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
-  local rdynamic = "-rdynamic"
-  local ldl = "-ldl"
-  local binary_extension = ""
-  if shellout(CC .. " -dumpmachine"):match("mingw") then
-    rdynamic = ""
-    ldl = ""
-    binary_extension = ".exe"
-  end
-  local ccstr = ccformat:format(
-    CC, infile, liblua.name, rdynamic, ldl, linklibstr, otherflags_str, 
-    mainlua.basename_noextension, binary_extension
-  )
-  print(ccstr)
-  shellout(ccstr)
+local linklibs = {}
+for i, v in ipairs(module_library_files) do
+  table.insert(linklibs, v.name)
 end
+for i, v in ipairs(dep_library_files) do
+  table.insert(linklibs, v.name)
+end
+local linklibstr = table.concat(linklibs, " ")
+local ccformat = "%s -Os -std=c99 %s.c %s %s %s -lm %s %s -o %s%s"
+-- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
+local rdynamic = "-rdynamic"
+local ldl = "-ldl"
+local binary_extension = ""
+if shellout(CC .. " -dumpmachine"):match("mingw") then
+  rdynamic = ""
+  ldl = ""
+  binary_extension = ".exe"
+end
+local ccstr = ccformat:format(
+  CC, infilename, liblua.name, rdynamic, ldl, linklibstr, otherflags_str, 
+  mainlua.basename_noextension, binary_extension
+)
+print(ccstr)
+shellout(ccstr)
