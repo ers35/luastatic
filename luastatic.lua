@@ -88,7 +88,7 @@ local lua_module_require_template = [[struct module
   char *name;
   unsigned char *buf;
   unsigned int len;
-} lua_bundle[] = 
+} const static lua_bundle[] = 
 {
 %s
 };
@@ -163,7 +163,7 @@ lua_loader(lua_State *l)
   size_t namelen;
   const char *modname = lua_tolstring(l, -1, &namelen);
   //printf("lua_loader: %%i %%.*s\n", (unsigned)namelen, (int)namelen, modname);
-  struct module *mod = NULL;
+  const struct module *mod = NULL;
   for (int i = 0; i < arraylen(lua_bundle); ++i)
   {
     if (namelen == strlen(lua_bundle[i].name) && memcmp(modname, lua_bundle[i].name, namelen) == 0)
