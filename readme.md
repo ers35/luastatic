@@ -1,9 +1,10 @@
 `luastatic` takes one or more Lua source files, embeds them in a C program that uses the 
 Lua C API, and builds that program to an executable. The executable runs on systems that 
-do not have Lua installed because it contains the Lua interpreter.
+do not have Lua installed because it contains the Lua interpreter. Lua 5.1, 5.2, 5.3 and 
+LuaJIT are supported.
 
 ## Building
-Run `make`
+Run `make` or install from [LuaRocks](http://luarocks.org/modules/ers35/luastatic).
 
 ## Usage
 ```
@@ -30,6 +31,8 @@ $ luastatic main.lua display.lua logger.lua machine.lua port.lua z80.lua \
 $ ./main
 ```
 
+See another example at [Lua.Space](http://lua.space/tools/build-a-standalone-executable).
+
 ## Arguments
 ```
 luastatic main.lua[1] require.lua[2] liblua.a[3] module.a[4] -Iinclude/lua[5] [6]
@@ -43,6 +46,3 @@ luastatic main.lua[1] require.lua[2] liblua.a[3] module.a[4] -Iinclude/lua[5] [6
 
 ## Users
 - [Omnia](https://github.com/tongson/omnia)
-
-## TODO
--
