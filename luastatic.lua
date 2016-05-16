@@ -30,7 +30,7 @@ end
 -- parse arguments
 for i, name in ipairs(arg) do
   local extension = name:match("%.(%a+)$")
-  if extension == "lua" or extension == "a" then
+  if extension == "lua" or extension == "a" or extension =="dylib" then
     if not fileExists(name) then
       print("file does not exist: ", name)
       os.exit(1)
@@ -45,7 +45,7 @@ for i, name in ipairs(arg) do
 
     if extension == "lua" then
       table.insert(lua_source_files, info)
-    elseif extension == "a" then
+    elseif extension == "a" or extension == "dylib" then
       -- the library is one of three types: liblua.a, a Lua module, 
       -- or a library dependency
       local nmout = shellout("nm " .. name)
