@@ -4,7 +4,6 @@
 
 local mainlua
 local lua_source_files = {}
-local liblua
 local module_library_files = {}
 local dep_library_files = {}
 local otherflags = {}
@@ -30,7 +29,12 @@ end
 -- parse arguments
 for i, name in ipairs(arg) do
   local extension = name:match("%.(%a+)$")
-  if extension == "lua" or extension == "a" or extension =="dylib" then
+  if 
+    extension == "lua" or 
+    extension == "a" or 
+    extension == "so" or 
+    extension == "dylib" 
+  then
     if not fileExists(name) then
       print("file does not exist: ", name)
       os.exit(1)
@@ -45,17 +49,18 @@ for i, name in ipairs(arg) do
 
     if extension == "lua" then
       table.insert(lua_source_files, info)
-    elseif extension == "a" or extension == "dylib" then
-      -- the library is one of three types: liblua.a, a Lua module, 
-      -- or a library dependency
+    elseif 
+      extension == "a" or 
+      extension == "so" or 
+      extension == "dylib" 
+    then
+      -- the library either a Lua module or a library dependency
       local nmout = shellout("nm " .. name)
       if not nmout then
         print("nm not found")
         os.exit(1)
       end
-      if nmout:find("T _?luaL_newstate") then
-        liblua = info
-      elseif nmout:find("luaopen_" .. info.basename_noextension) then
+      if nmout:find("luaopen_" .. info.basename_noextension) then
         table.insert(module_library_files, info)
       else
         table.insert(dep_library_files, info)
@@ -68,7 +73,7 @@ for i, name in ipairs(arg) do
 end
 local otherflags_str = table.concat(otherflags, " ")
 
-if #lua_source_files == 0 or liblua == nil then
+if #lua_source_files == 0 then
   print("usage: luastatic main.lua /path/to/liblua.a -I/directory/containing/lua.h/")
   os.exit()
 end
@@ -267,7 +272,7 @@ for i, v in ipairs(dep_library_files) do
   table.insert(linklibs, v.name)
 end
 local linklibstr = table.concat(linklibs, " ")
-local ccformat = "%s -Os -std=c99 %s.c %s %s %s -lm %s %s -o %s%s"
+local ccformat = "%s -Os -std=c99 %s.c %s %s -lm %s %s -o %s%s"
 -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
 local rdynamic = "-rdynamic"
 local ldl = "-ldl"
@@ -278,7 +283,7 @@ if shellout(CC .. " -dumpmachine"):match("mingw") then
   binary_extension = ".exe"
 end
 local ccstr = ccformat:format(
-  CC, infilename, liblua.name, rdynamic, ldl, linklibstr, otherflags_str, 
+  CC, infilename, linklibstr, rdynamic, ldl, otherflags_str, 
   mainlua.basename_noextension, binary_extension
 )
 print(ccstr)
