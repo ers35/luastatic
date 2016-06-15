@@ -126,9 +126,7 @@ for i, v in ipairs(lua_source_files) do
   local fmt = [[static unsigned char lua_require_%s[] = {%s};]]
   table.insert(luaprogramcdata, fmt:format(i, hexstr))
   table.insert(lua_module_require, 
-    ("\t{\"%s\", lua_require_%s, %s},"):format(
-      v.path:gsub("/", "."):gsub("%.lua$", ""), i, #strdata
-    )
+    ("\t{\"%s\", lua_require_%s, %s},"):format(v.dotpath_noextension, i, #strdata)
   )
 end
 local lua_module_requirestr = lua_module_require_template:format(
