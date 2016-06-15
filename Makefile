@@ -65,7 +65,10 @@ test: hello multiple.dots hypen- require1 subdir binmodule binmodule_dots bom sh
 	./test/subdir
 	./test/binmodule
 	./test/binmodule_dots
+# Lua 5.1 does not support BOM
+ifneq ($(LUA_VERSION), 5.1.5)
 	./test/bom
+endif
 	./test/shebang
 	./test/shebang_nonewline
 	./test/empty

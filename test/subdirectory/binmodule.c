@@ -8,6 +8,10 @@ static const luaL_Reg binmodulelib[] = {
 
 LUALIB_API int luaopen_subdirectory_binmodule(lua_State *L)
 {
+#if LUA_VERSION_NUM == 501
+  luaL_register(L, "binmodulelib", binmodulelib);
+#else
   luaL_newlib(L, binmodulelib);
+#endif
   return 1;
 }
