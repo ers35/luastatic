@@ -1,1 +1,1 @@
-print(require"subdirectory.test")
+require("subdirectory.test")

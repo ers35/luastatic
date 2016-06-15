@@ -47,12 +47,17 @@ shebang_nonewline: luastatic
 	cd test && ../luastatic shebang_nonewline.lua ../liblua.a -I../lua-$(LUA_VERSION)/src
 empty: luastatic
 	cd test && ../luastatic empty.lua ../liblua.a -I../lua-$(LUA_VERSION)/src
+subdir_binmodule: luastatic
+	cd test && \
+	cc -c -I../lua-$(LUA_VERSION)/src subdirectory/binmodule.c -o subdirectory/binmodule.o && \
+	ar rcs subdirectory/binmodule.a subdirectory/binmodule.o && \
+	../luastatic subdir_binmodule.lua subdirectory/binmodule.a ../liblua.a -I../lua-$(LUA_VERSION)/src
 
 # mingw
 # CC=x86_64-w64-mingw32-gcc lua luastatic.lua test/hello.lua /usr/x86_64-w64-mingw32/lib/liblua5.2.a -Ilua-5.2.4/src/
 
 test: hello multiple.dots hypen- require1 subdir binmodule binmodule_dots bom shebang \
-	shebang_nonewline empty
+	shebang_nonewline empty subdir_binmodule
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-
@@ -64,10 +69,11 @@ test: hello multiple.dots hypen- require1 subdir binmodule binmodule_dots bom sh
 	./test/shebang
 	./test/shebang_nonewline
 	./test/empty
+	./test/subdir_binmodule
 
 clean:
 	cd lua-$(LUA_VERSION) && make clean
 	rm -f liblua.a lua *.lua.c luastatic
 	cd test && rm -f *.o hello hypen- multiple.dots require1 subdir \
 		binmodule binmodule_dots binmodule.a binmodule.dots.a bom shebang shebang_nonewline \
-		empty
+		empty subdir_binmodule

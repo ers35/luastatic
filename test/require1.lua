@@ -1,1 +1,1 @@
-print(require"require2")
+
