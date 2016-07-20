@@ -35,6 +35,10 @@ binmodule: luastatic
 	cd test && cc -c -I../lua-$(LUA_VERSION)/src binmodule.c -o binmodule.o \
 	&& ar rcs binmodule.a binmodule.o && \
 	../luastatic binmodule.lua ../liblua.a binmodule.a -I../lua-$(LUA_VERSION)/src
+binmodule_multiple: luastatic
+	cd test && cc -c -I../lua-$(LUA_VERSION)/src binmodule_multiple.c -o binmodule_multiple.o \
+	&& ar rcs binmodule_multiple.a binmodule_multiple.o && \
+	../luastatic binmodule_multiple.lua ../liblua.a binmodule_multiple.a -I../lua-$(LUA_VERSION)/src
 binmodule_dots: luastatic
 	cd test && cc -c -I../lua-$(LUA_VERSION)/src binmodule_dots.c -o binmodule_dots.o \
 	&& ar rcs binmodule.dots.a binmodule_dots.o && \
@@ -56,14 +60,15 @@ subdir_binmodule: luastatic
 # mingw
 # CC=x86_64-w64-mingw32-gcc lua luastatic.lua test/hello.lua /usr/x86_64-w64-mingw32/lib/liblua5.2.a -Ilua-5.2.4/src/
 
-test: hello multiple.dots hypen- require1 subdir binmodule binmodule_dots bom shebang \
-	shebang_nonewline empty subdir_binmodule
+test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
+	binmodule_dots bom shebang shebang_nonewline empty subdir_binmodule
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-
 	./test/require1
 	./test/subdir
 	./test/binmodule
+	./test/binmodule_multiple
 	./test/binmodule_dots
 # Lua 5.1 does not support BOM
 ifneq ($(LUA_VERSION), 5.1.5)
@@ -78,5 +83,5 @@ clean:
 	cd lua-$(LUA_VERSION) && make clean
 	rm -f liblua.a lua *.lua.c luastatic
 	cd test && rm -f *.o hello hypen- multiple.dots require1 subdir \
-		binmodule binmodule_dots binmodule.a binmodule.dots.a bom shebang shebang_nonewline \
-		empty subdir_binmodule
+		binmodule binmodule_multiple binmodule_dots binmodule.a binmodule.dots.a bom \
+		shebang shebang_nonewline empty subdir_binmodule

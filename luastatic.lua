@@ -5,6 +5,7 @@
 local mainlua
 local lua_source_files = {}
 local module_library_files = {}
+local module_link_libs = {}
 local dep_library_files = {}
 local otherflags = {}
 
@@ -76,8 +77,21 @@ for i, name in ipairs(arg) do
         print("nm not found")
         os.exit(1)
       end
-      if nmout:find("luaopen_" .. info.dotpath_noextension) then
-        table.insert(module_library_files, info)
+      local is_module = false
+      if not nmout:find("T _?luaL_newstate") then
+        for luaopen in nmout:gmatch("luaopen_([%a%p%d]+)") do
+          local modinfo = {}
+          modinfo.path = info.path
+          modinfo.dotpath_underscore = luaopen
+          modinfo.dotpath = modinfo.dotpath_underscore:gsub("_", ".")
+          modinfo.dotpath_noextension = modinfo.dotpath
+          -- print(modinfo.path, modinfo.dotpath, modinfo.dotpath_underscore, modinfo.dotpath_noextension)
+          is_module = true
+          table.insert(module_library_files, modinfo)
+        end
+      end
+      if is_module then
+        table.insert(module_link_libs, info)
       else
         table.insert(dep_library_files, info)
       end
@@ -300,7 +314,7 @@ if not shellout(CC .. " --version") then
 end
 
 local linklibs = {}
-for i, v in ipairs(module_library_files) do
+for i, v in ipairs(module_link_libs) do
   table.insert(linklibs, v.path)
 end
 for i, v in ipairs(dep_library_files) do
