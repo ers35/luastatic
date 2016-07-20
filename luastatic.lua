@@ -104,6 +104,8 @@ end
 local otherflags_str = table.concat(otherflags, " ")
 
 if #lua_source_files == 0 then
+  local version = "0.0.4"
+  print("luastatic " .. version)
   print("usage: luastatic main.lua /path/to/liblua.a -I/directory/containing/lua.h/")
   os.exit()
 end

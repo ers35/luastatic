@@ -79,6 +79,9 @@ endif
 	./test/empty
 	./test/subdir_binmodule
 
+luastatic-git.zip:
+	git archive HEAD --output $@
+
 clean:
 	cd lua-$(LUA_VERSION) && make clean
 	rm -f liblua.a lua *.lua.c luastatic
