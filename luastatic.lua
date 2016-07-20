@@ -200,7 +200,7 @@ static int lua_loader(lua_State *l)
   }
   if (luaL_loadbuffer(l, (const char*)mod->buf, mod->len, mod->name) != LUA_OK)
   {
-    printf("luaL_loadstring: %%s\n", lua_tostring(l, 1));
+    printf("luaL_loadstring: %%s %%s\n", lua_tostring(l, 1), lua_tostring(l, 2));
     lua_close(l);
     exit(1);
   }
