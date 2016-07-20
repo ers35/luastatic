@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
   lua_State *L = luaL_newstate();
   luaL_openlibs(L);
   
-  // add loader to package.searchers
+  // add loader to package.searchers after the package.preload loader
   lua_getglobal(L, "table");
   lua_getfield(L, -1, "insert");
   // remove "table"
@@ -260,9 +260,10 @@ int main(int argc, char *argv[])
 #endif
   // remove package table from the stack
   lua_remove(L, -2);
+  lua_pushnumber(L, 2);
   lua_pushcfunction(L, lua_loader);
-  // table.insert(package.searchers, lua_loader);
-  lua_call(L, 2, 0);
+  // table.insert(package.searchers, 2, lua_loader);
+  lua_call(L, 3, 0);
   assert(lua_gettop(L) == 0);
   
 %s
