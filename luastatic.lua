@@ -147,7 +147,7 @@ local lua_module_requirestr = lua_module_require_template:format(
 local luaprogramcdatastr = table.concat(luaprogramcdata, "\n")
 
 local bin_module_require = {}
-local bin_module_require_template = [[int luaopen_%s(lua_State *L);
+local bin_module_require_template = [[  int luaopen_%s(lua_State *L);
   luaL_requiref(L, "%s", luaopen_%s, 0);
   lua_pop(L, 1);
 ]]
@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
   lua_call(L, 2, 0);
   assert(lua_gettop(L) == 0);
   
-  %s
+%s
   
   if (luaL_loadbuffer(L, (const char*)lua_bundle[0].buf, lua_bundle[0].len, "%s"))
   {
