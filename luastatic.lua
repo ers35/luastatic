@@ -8,7 +8,9 @@ local module_library_files = {}
 local dep_library_files = {}
 local otherflags = {}
 
-local function fileExists(name)
+local CC = os.getenv("CC") or "cc"
+
+local function file_exists(name)
   local f = io.open(name, "r")
   if f then
     f:close()
@@ -20,10 +22,20 @@ end
 local function shellout(cmd)
   local f = io.popen(cmd)
   local str = f:read("*all")
-  if f:close() then
-    return str
+  local ok, errstr, errnum = f:close()
+  if ok then
+    return str, errnum
   end
   return nil
+end
+
+local function shared_library_exists(lib)
+  local cmd = ([[
+echo "int main(int argc, char *argv[]) { return 0; }" |\
+%s -l%s -o /dev/null -xc - 1>/dev/null 2> /dev/null
+]]):format(CC, lib)
+  local str, errnum = shellout(cmd)
+  return errnum == 0
 end
 
 -- parse arguments
@@ -35,7 +47,7 @@ for i, name in ipairs(arg) do
     extension == "so" or 
     extension == "dylib" 
   then
-    if not fileExists(name) then
+    if not file_exists(name) then
       print("file does not exist: ", name)
       os.exit(1)
     end
@@ -281,7 +293,6 @@ local outfile = io.open(infilename .. ".c", "w+")
 outfile:write(cprog)
 outfile:close()
 
-local CC = os.getenv("CC") or "cc"
 if not shellout(CC .. " --version") then
   print("C compiler not found.")
   os.exit(1)
@@ -298,11 +309,13 @@ local linklibstr = table.concat(linklibs, " ")
 local ccformat = "%s -Os -std=c99 %s.c %s %s -lm %s %s -o %s%s"
 -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
 local rdynamic = "-rdynamic"
-local ldl = "-ldl"
+local ldl = ""
+if shared_library_exists("dl") then
+  ldl = "-ldl"
+end
 local binary_extension = ""
 if shellout(CC .. " -dumpmachine"):match("mingw") then
   rdynamic = ""
-  ldl = ""
   binary_extension = ".exe"
 end
 local ccstr = ccformat:format(
