@@ -56,12 +56,16 @@ subdir_binmodule: luastatic
 	cc -c -I../lua-$(LUA_VERSION)/src subdirectory/binmodule.c -o subdirectory/binmodule.o && \
 	ar rcs subdirectory/binmodule.a subdirectory/binmodule.o && \
 	../luastatic subdir_binmodule.lua subdirectory/binmodule.a ../liblua.a -I../lua-$(LUA_VERSION)/src
+mangled: luastatic
+	cd test && c++ -c -I../lua-$(LUA_VERSION)/src mangled.cpp -o mangled.o \
+	&& ar rcs mangled.a mangled.o && \
+	../luastatic hello.lua ../liblua.a mangled.a -I../lua-$(LUA_VERSION)/src
 
 # mingw
 # CC=x86_64-w64-mingw32-gcc lua luastatic.lua test/hello.lua /usr/x86_64-w64-mingw32/lib/liblua5.2.a -Ilua-5.2.4/src/
 
 test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
-	binmodule_dots bom shebang shebang_nonewline empty subdir_binmodule
+	binmodule_dots bom shebang shebang_nonewline empty subdir_binmodule mangled
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-
@@ -78,6 +82,7 @@ endif
 	./test/shebang_nonewline
 	./test/empty
 	./test/subdir_binmodule
+	@# Building mangled is good enough. No need to run it.
 
 luastatic-git.zip:
 	git archive HEAD --output $@

@@ -80,7 +80,7 @@ for i, name in ipairs(arg) do
       end
       local is_module = false
       if not nmout:find("T _?luaL_newstate") then
-        for luaopen in nmout:gmatch("luaopen_([%a%p%d]+)") do
+        for luaopen in nmout:gmatch(" luaopen_([%a%p%d]+)") do
           local modinfo = {}
           modinfo.path = info.path
           modinfo.dotpath_underscore = luaopen
