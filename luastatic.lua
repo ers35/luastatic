@@ -10,6 +10,7 @@ local dep_library_files = {}
 local otherflags = {}
 
 local CC = os.getenv("CC") or "cc"
+local NM = os.getenv("NM") or "nm"
 
 local function file_exists(name)
   local f = io.open(name, "r")
@@ -72,7 +73,7 @@ for i, name in ipairs(arg) do
       extension == "dylib" 
     then
       -- the library is either a Lua module or a library dependency
-      local nmout = shellout("nm " .. info.path)
+      local nmout = shellout(NM .. " " .. info.path)
       if not nmout then
         print("nm not found")
         os.exit(1)
