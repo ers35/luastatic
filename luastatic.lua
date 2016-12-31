@@ -33,7 +33,7 @@ end
 local function shared_library_exists(lib)
   local cmd = ([[
 echo "int main(int argc, char *argv[]) { return 0; }" |\
-%s -l%s -o /dev/null -xc - 1>/dev/null 2> /dev/null
+%s -l%s -o /dev/null -xc - 1>/dev/null 2>/dev/null
 ]]):format(CC, lib)
   local str, errnum = shellout(cmd)
   return errnum == 0
@@ -71,7 +71,7 @@ for i, name in ipairs(arg) do
       extension == "so" or 
       extension == "dylib" 
     then
-      -- the library either a Lua module or a library dependency
+      -- the library is either a Lua module or a library dependency
       local nmout = shellout("nm " .. info.path)
       if not nmout then
         print("nm not found")
@@ -104,7 +104,7 @@ end
 local otherflags_str = table.concat(otherflags, " ")
 
 if #lua_source_files == 0 then
-  local version = "0.0.4"
+  local version = "0.0.5"
   print("luastatic " .. version)
   print("usage: luastatic main.lua /path/to/liblua.a -I/directory/containing/lua.h/")
   os.exit()
