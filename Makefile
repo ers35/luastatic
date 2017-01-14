@@ -90,6 +90,8 @@ luastatic-git.zip:
 clean:
 	cd lua-$(LUA_VERSION) && make clean
 	rm -f liblua.a lua *.lua.c luastatic
-	cd test && rm -f *.o hello hypen- multiple.dots require1 subdir \
-		binmodule binmodule_multiple binmodule_dots binmodule.a binmodule.dots.a bom \
+	cd test && rm -f hello hypen- multiple.dots require1 subdir \
+		binmodule binmodule_multiple binmodule_dots bom \
 		shebang shebang_nonewline empty subdir_binmodule
+	find test/ -name *.o | xargs rm -f
+	find test/ -name *.a | xargs rm -f
