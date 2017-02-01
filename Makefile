@@ -30,6 +30,9 @@ binmodule: luastatic
 	cd test && cc -c -I$(LUA_INCLUDE) binmodule.c -o binmodule.o \
 	&& ar rcs binmodule.a binmodule.o && \
 	../luastatic binmodule.lua $(LIBLUA_A) binmodule.a -I$(LUA_INCLUDE)
+binmodule_so_: luastatic
+	cd test && cc -shared -fPIC -I$(LUA_INCLUDE) binmodule_so.c -o binmodule_so.so && \
+	../luastatic binmodule_so_.lua $(LIBLUA_A) -I$(LUA_INCLUDE)
 binmodule_multiple: luastatic
 	cd test && cc -c -I$(LUA_INCLUDE) binmodule_multiple.c -o binmodule_multiple.o \
 	&& ar rcs binmodule_multiple.a binmodule_multiple.o && \
@@ -61,13 +64,15 @@ mangled: luastatic
 # CC=x86_64-w64-mingw32-gcc lua luastatic.lua test/hello.lua /usr/x86_64-w64-mingw32/lib/liblua5.2.a -Ilua-5.2.4/src/
 
 test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
-	binmodule_dots bom shebang shebang_nonewline empty subdir_binmodule mangled
+	binmodule_so_ binmodule_dots bom shebang shebang_nonewline empty subdir_binmodule \
+	mangled
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-
 	./test/require1
 	./test/subdir
 	./test/binmodule
+	cd test && ./binmodule_so_
 	./test/binmodule_multiple
 	./test/binmodule_dots
 	# Lua 5.1 does not support BOM
