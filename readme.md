@@ -36,6 +36,9 @@ luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] 
 ### Cross compile for Windows
 `CC=x86_64-w64-mingw32-gcc luastatic main.lua /usr/x86_64-w64-mingw32/lib/liblua5.2.a -I/usr/x86_64-w64-mingw32/include/lua5.2/`
 
+### LuaJIT 2.0.4 on Ubuntu 16.10
+`luastatic main.lua /usr/lib/x86_64-linux-gnu/libluajit-5.1.a -I/usr/include/luajit-2.0 -no-pie`
+
 See another example at [Lua.Space](http://lua.space/tools/build-a-standalone-executable).
 
 ## Users
