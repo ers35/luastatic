@@ -7,7 +7,7 @@ Run luastatic.lua or install from [LuaRocks](http://luarocks.org/modules/ers35/l
 
 ## Usage
 ```
-luastatic main.lua[1] require.lua[2] liblua.a[3] module.a[4] -I/include/lua[5] [6]
+luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] [6]
   [1]: The entry point to the Lua program
   [2]: One or more required Lua source files
   [3]: The path to the Lua interpreter static library
@@ -25,10 +25,16 @@ luastatic main.lua[1] require.lua[2] liblua.a[3] module.a[4] -I/include/lua[5] [
 `luastatic main.lua library.lua /usr/lib/x86_64-linux-gnu/liblua5.2.a -I/usr/include/lua5.2`
 
 ### C library containing luaopen_()
-`luastatic main.lua module.a /usr/lib/x86_64-linux-gnu/liblua5.2.a -I/usr/include/lua5.2`
+`luastatic main.lua library.a /usr/lib/x86_64-linux-gnu/liblua5.2.a -I/usr/include/lua5.2`
 
 ### Dynamically link with Lua
 `luastatic main.lua -llua5.2 -I/usr/include/lua5.2`
+
+### Statically link with musl libc
+`CC=musl-gcc luastatic main.lua /usr/lib/x86_64-linux-musl/liblua5.2.a -I/usr/include/lua5.2 -static`
+
+### Cross compile for Windows
+`CC=x86_64-w64-mingw32-gcc luastatic main.lua /usr/x86_64-w64-mingw32/lib/liblua5.2.a -I/usr/x86_64-w64-mingw32/include/lua5.2/`
 
 See another example at [Lua.Space](http://lua.space/tools/build-a-standalone-executable).
 
