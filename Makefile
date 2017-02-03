@@ -1,10 +1,6 @@
-# make CC="gcc"
-# make CC="musl-gcc"
-# make CC="clang"
-
 LUA = lua5.2
-LIBLUA_A = /usr/lib/x86_64-linux-gnu/liblua5.2.a
-LUA_INCLUDE = /usr/include/lua5.2
+LIBLUA_A = /usr/lib/x86_64-linux-gnu/lib$(LUA).a
+LUA_INCLUDE = /usr/include/$(LUA)
 
 .PHONY: *.lua *.lua.c test
 
