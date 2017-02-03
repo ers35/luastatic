@@ -36,8 +36,12 @@ local function shared_library_exists(lib)
 echo "int main(int argc, char *argv[]) { return 0; }" |\
 %s -l%s -o /dev/null -xc - 1>/dev/null 2>/dev/null
 ]]):format(CC, lib)
-  local str, errnum = shellout(cmd)
-  return errnum == 0
+  --[[
+  Use os.execute() to get the status code because io.popen() does not return the status 
+  code in Lua 5.1.
+  --]]
+  local ok = os.execute(cmd)
+  return (ok == true or ok == 0)
 end
 
 -- parse arguments
