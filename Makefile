@@ -59,6 +59,12 @@ mangled: luastatic
 	cd test && c++ -c -I$(LUA_INCLUDE) mangled.cpp -o mangled.o \
 	&& ar rcs mangled.a mangled.o && \
 	CC=c++ ../luastatic hello.lua $(LIBLUA_A) mangled.a -I$(LUA_INCLUDE) $(CFLAGS)
+disable_compiling: luastatic
+	cd test && CC="" ../luastatic hello.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
+compiler_not_found: luastatic
+	cd test && \
+	if CC="sds43fq1z7sfw" ../luastatic hello.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS) ; \
+	then false ; else true ; fi
 
 test:
 	LUA=lua5.1 make -j5 run_test
@@ -69,7 +75,7 @@ test:
 
 run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
 	binmodule_so_ binmodule_dots bom shebang shebang_nonewline empty subdir_binmodule \
-	mangled
+	mangled disable_compiling compiler_not_found
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-

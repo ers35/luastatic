@@ -33,6 +33,15 @@ local function shellout(cmd)
 end
 
 --[[
+Use os.execute() when stdout isn't needed instead of shellout() because io.popen() does 
+not return the status code in Lua 5.1.
+--]]
+local function execute(cmd)
+  local ok = os.execute(cmd)
+  return (ok == true or ok == 0)
+end
+
+--[[
 Determine if a shared library is available by seeing if a program compiles and links.
 --]]
 local function shared_library_exists(lib)
@@ -40,12 +49,8 @@ local function shared_library_exists(lib)
 echo "int main(int argc, char *argv[]) { return 0; }" |\
 %s -l%s -o /dev/null -xc - 1>/dev/null 2>/dev/null
 ]]):format(CC, lib)
-  --[[
-  Use os.execute() instead of shellout() because io.popen() does not return the status 
-  code in Lua 5.1.
-  --]]
-  local ok = os.execute(cmd)
-  return (ok == true or ok == 0)
+  local ok = execute(cmd)
+  return ok
 end
 
 --[[
@@ -86,7 +91,7 @@ for _, name in ipairs(arg) do
     extension == "dylib" 
   then
     if not file_exists(name) then
-      print("file does not exist: ", name)
+      io.stderr:write("file does not exist: " .. name .. "\n")
       os.exit(1)
     end
 
@@ -108,7 +113,7 @@ for _, name in ipairs(arg) do
       -- The library is either a Lua module or a library dependency.
       local nmout = shellout(NM .. " " .. info.path)
       if not nmout then
-        print("nm not found")
+        io.stderr:write("nm not found\n")
         os.exit(1)
       end
       local is_module = false
@@ -356,11 +361,13 @@ local outfile = io.open(infilename .. ".c", "w+")
 outfile:write(cprogram)
 outfile:close()
 
---[[
-Exit if a C compiler was not found. The C source file is already written.
---]]
-if not shellout(CC .. " --version") then
-  print("C compiler not found.")
+if os.getenv("CC") == "" then
+  -- Disable compiling and exit with a success code.
+  os.exit(0)
+end
+
+if not execute(CC .. " --version 1>/dev/null 2>/dev/null") then
+  io.stderr:write("C compiler not found.\n")
   os.exit(1)
 end
 
@@ -389,4 +396,9 @@ local ccstr = ("%s -Os %s.c %s %s -lm %s %s -o %s%s"):format(
   mainlua.basename_noextension, binary_extension
 )
 print(ccstr)
-shellout(ccstr)
+local ok = execute(ccstr)
+if ok then
+  os.exit(0)
+else
+  os.exit(1)
+end
