@@ -45,6 +45,8 @@ shebang: luastatic
 	cd test && ../luastatic shebang.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 shebang_nonewline: luastatic
 	cd test && ../luastatic shebang_nonewline.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
+bom_shebang: luastatic
+	cd test && ../luastatic bom_shebang.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 empty: luastatic
 	cd test && ../luastatic empty.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 subdir_binmodule: luastatic
@@ -74,8 +76,8 @@ test:
 		LUA_INCLUDE=/usr/include/luajit-2.0 CFLAGS="-no-pie" make -j5 run_test
 
 run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
-	binmodule_so_ binmodule_dots bom shebang shebang_nonewline empty subdir_binmodule \
-	mangled disable_compiling compiler_not_found
+	binmodule_so_ binmodule_dots bom shebang shebang_nonewline bom_shebang \
+	empty subdir_binmodule mangled disable_compiling compiler_not_found
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-
@@ -87,6 +89,7 @@ run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multipl
 	./test/binmodule_dots
 	# Lua 5.1 does not support BOM
 	./test/bom || true
+	./test/bom_shebang || true
 	./test/shebang
 	./test/shebang_nonewline
 	./test/empty
@@ -95,6 +98,7 @@ run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multipl
 clean:
 	rm -f *.lua.c luastatic
 	find test/ -type f -executable | xargs rm -f
+	find test/ -name *.lua.c | xargs rm -f
 	find test/ -name *.o | xargs rm -f
 	find test/ -name *.a | xargs rm -f
 	find test/ -name *.so | xargs rm -f
