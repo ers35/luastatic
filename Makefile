@@ -54,10 +54,11 @@ subdir_binmodule: luastatic
 	../luastatic subdir_binmodule.lua subdirectory/binmodule.a $(LIBLUA_A) \
 		-I$(LUA_INCLUDE) $(CFLAGS)
 # Building mangled is good enough. No need to run it.
+# Also test compiling with a C++ compiler.
 mangled: luastatic
 	cd test && c++ -c -I$(LUA_INCLUDE) mangled.cpp -o mangled.o \
 	&& ar rcs mangled.a mangled.o && \
-	../luastatic hello.lua $(LIBLUA_A) mangled.a -I$(LUA_INCLUDE) $(CFLAGS)
+	CC=c++ ../luastatic hello.lua $(LIBLUA_A) mangled.a -I$(LUA_INCLUDE) $(CFLAGS)
 
 test:
 	LUA=lua5.1 make -j5 run_test

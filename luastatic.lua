@@ -155,10 +155,10 @@ local luaprogramcdata = {}
 local lua_module_require = {}
 local lua_module_require_template = [[struct module
 {
-  char *name;
-  unsigned char *buf;
-  unsigned int len;
-} const static lua_bundle[] = 
+  const char *name;
+  const unsigned char *buf;
+  const unsigned int len;
+} static const lua_bundle[] = 
 {
 %s
 };
@@ -182,7 +182,7 @@ for i, v in ipairs(lua_source_files) do
     end
   end
   local hexstr = bin_to_hex_string(strdata)
-  local fmt = [[static unsigned char lua_require_%s[] = {%s};]]
+  local fmt = [[static const unsigned char lua_require_%s[] = {%s};]]
   table.insert(luaprogramcdata, fmt:format(i, hexstr))
   table.insert(lua_module_require, 
     ("\t{\"%s\", lua_require_%s, %s},"):format(v.dotpath_noextension, i, #strdata)
@@ -211,9 +211,15 @@ initialize any Lua libraries and run the program.
 --]]
 local cprogram = ([[
 #include <assert.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
+#ifdef __cplusplus
+}
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -228,14 +234,14 @@ local cprogram = ([[
 
 %s
 
-// Try to load the module from lua_bundle when require() is called.
+/* Try to load the module from lua_bundle when require() is called. */
 static int lua_loader(lua_State *l)
 {
   size_t namelen;
   const char *modname = lua_tolstring(l, -1, &namelen);
-  //printf("lua_loader: %%i %%.*s\n", (unsigned)namelen, (int)namelen, modname);
   const struct module *mod = NULL;
-  for (int i = 0; i < arraylen(lua_bundle); ++i)
+  int i = 0;
+  for (; i < arraylen(lua_bundle); ++i)
   {
     if
     (
@@ -249,7 +255,7 @@ static int lua_loader(lua_State *l)
   }
   if (!mod)
   {
-    //printf("module not found: %%s\n", modname);
+    /* Module not found. */
     lua_pushnil(l);
     return 1;
   }
@@ -262,7 +268,7 @@ static int lua_loader(lua_State *l)
   return 1;
 }
 
-// Copied from lua.c
+/* Copied from lua.c */
 static void createargtable (lua_State *L, char **argv, int argc, int script) {
   int i, narg;
   if (script == argc) script = 0;  /* no script name? */
@@ -276,7 +282,7 @@ static void createargtable (lua_State *L, char **argv, int argc, int script) {
 }
 
 #if LUA_VERSION_NUM == 501
-// Copied from https://github.com/keplerproject/lua-compat-5.2
+/* Copied from https://github.com/keplerproject/lua-compat-5.2 */
 static void luaL_requiref (lua_State *L, char const* modname,
                     lua_CFunction openf, int glb) {
   luaL_checkstack(L, 3, "not enough stack slots");
@@ -301,10 +307,10 @@ int main(int argc, char *argv[])
   lua_State *L = luaL_newstate();
   luaL_openlibs(L);
   
-  // Add the loader to package.searchers after the package.preload loader.
+  /* Add the loader to package.searchers after the package.preload loader. */
   lua_getglobal(L, "table");
   lua_getfield(L, -1, "insert");
-  // remove "table"
+  /* remove "table" */
   lua_remove(L, -2);
   assert(lua_isfunction(L, -1));
   lua_getglobal(L, "package");
@@ -313,20 +319,20 @@ int main(int argc, char *argv[])
 #else
   lua_getfield(L, -1, "searchers");
 #endif
-  // Remove the package table from the stack.
+  /* Remove the package table from the stack. */
   lua_remove(L, -2);
   lua_pushnumber(L, 2);
   lua_pushcfunction(L, lua_loader);
-  // table.insert(package.searchers, 2, lua_loader);
+  /* table.insert(package.searchers, 2, lua_loader); */
   lua_call(L, 3, 0);
   assert(lua_gettop(L) == 0);
   
 %s
   
-  // Run the main Lua program.
+  /* Run the main Lua program. */
   if (luaL_loadbuffer(L, (const char*)lua_bundle[0].buf, lua_bundle[0].len, "%s"))
   {
-    // Print the error message.
+    /* Print the error message. */
     puts(lua_tostring(L, 1));
     lua_close(L);
     return 1;
@@ -378,7 +384,7 @@ if shellout(CC .. " -dumpmachine"):match("mingw") then
   binary_extension = ".exe"
 end
 local otherflags_str = table.concat(otherflags, " ")
-local ccstr = ("%s -Os -std=c99 %s.c %s %s -lm %s %s -o %s%s"):format(
+local ccstr = ("%s -Os %s.c %s %s -lm %s %s -o %s%s"):format(
   CC, infilename, linklibstr, rdynamic, ldl, otherflags_str, 
   mainlua.basename_noextension, binary_extension
 )
