@@ -7,9 +7,6 @@ local CC = os.getenv("CC") or "cc"
 -- The nm used to determine whether a library is liblua or a Lua binary module.
 local NM = os.getenv("NM") or "nm"
 
---[[
-Determine whether a file exists.
---]]
 local function file_exists(name)
   local f = io.open(name, "r")
   if f then
@@ -53,8 +50,7 @@ echo "int main(int argc, char *argv[]) { return 0; }" |\
 end
 
 --[[
-Create a hex string from the characters of a string. This is used to embed Lua source 
-files in a C program.
+Create a hex string from the characters of a string.
 --]]
 local function string_to_hex(characters)
   local hex = {}
@@ -64,9 +60,22 @@ local function string_to_hex(characters)
   return table.concat(hex, ", ")
 end
 
+--[[
+/path/to/file.lua -> file.lua
+--]]
 local function basename(path)
   local name = path:gsub([[(.*[\/])(.*)]], "%2")
   return name
+end
+
+local function is_binary_library(extension)
+  return 
+    -- Static library.
+    extension == "a" or 
+    -- Shared library.
+    extension == "so" or
+    -- Mach-O dynamic library.
+    extension == "dylib"
 end
 
 -- Required Lua source files.
@@ -87,12 +96,7 @@ appear.
 --]]
 for _, name in ipairs(arg) do
   local extension = name:match("%.(%a+)$")
-  if 
-    extension == "lua" or 
-    extension == "a" or 
-    extension == "so" or 
-    extension == "dylib" 
-  then
+  if extension == "lua" or is_binary_library(extension) then
     if not file_exists(name) then
       io.stderr:write("file does not exist: " .. name .. "\n")
       os.exit(1)
@@ -108,11 +112,7 @@ for _, name in ipairs(arg) do
 
     if extension == "lua" then
       table.insert(lua_source_files, info)
-    elseif 
-      extension == "a" or 
-      extension == "so" or 
-      extension == "dylib" 
-    then
+    elseif is_binary_library(extension) then
       -- The library is either a Lua module or a library dependency.
       local nmout = shellout(NM .. " " .. info.path)
       if not nmout then
@@ -325,6 +325,9 @@ out(([[
 
 ]]):format(mainlua.basename))
 
+--[[
+Embed Lua source code in the C program.
+--]]
 for i, file in ipairs(lua_source_files) do
   out("static const unsigned char lua_require_", i, "[] = {\n  ")
   local f = io.open(file.path, "r")
