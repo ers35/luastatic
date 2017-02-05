@@ -39,17 +39,6 @@ local function execute(cmd)
 end
 
 --[[
-Determine if a shared library is available by seeing if a program compiles and links.
---]]
-local function shared_library_exists(library)
-  local cmd = ([[
-echo "int main(int argc, char *argv[]) { return 0; }" |\
-%s -l%s -o /dev/null -xc - 1>/dev/null 2>/dev/null
-]]):format(CC, library)
-  return execute(cmd)
-end
-
---[[
 Create a hex string from the characters of a string.
 --]]
 local function string_to_hex(characters)
@@ -87,6 +76,7 @@ local module_link_libraries = {}
 local dep_library_files = {}
 -- Additional arguments are passed to the C compiler.
 local otherflags = {}
+local link_with_libdl = ""
 
 --[[
 Parse command line arguments. main.lua must be the first argument. Static libraries are 
@@ -120,7 +110,14 @@ for _, name in ipairs(arg) do
         os.exit(1)
       end
       local is_module = false
-      if not nmout:find("T _?luaL_newstate") then
+      if nmout:find("T _?luaL_newstate") then
+        if nmout:find("U _?dlopen") then
+          --[[
+          Link with libdl because liblua was built with support loading shared objects.
+          --]]
+          link_with_libdl = "-ldl"
+        end
+      else
         for luaopen in nmout:gmatch("[^dD] _?luaopen_([%a%p%d]+)") do
           local modinfo = {}
           modinfo.path = info.path
@@ -382,11 +379,6 @@ if not execute(CC .. " --version 1>/dev/null 2>/dev/null") then
   os.exit(1)
 end
 
-local ldl = ""
-if shared_library_exists("dl") then
-  ldl = "-ldl"
-end
-
 -- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
 local rdynamic = "-rdynamic"
 local binary_extension = ""
@@ -410,7 +402,7 @@ local compile_command = table.concat({
   table.concat(link_libraries, " "),
   rdynamic,
  "-lm",
-  ldl,
+  link_with_libdl,
   table.concat(otherflags, " "),
   "-o " .. mainlua.basename_noextension .. binary_extension,
 }, " ")
