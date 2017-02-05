@@ -64,6 +64,11 @@ local function string_to_hex(characters)
   return table.concat(hex, ", ")
 end
 
+local function basename(path)
+  local name = path:gsub([[(.*[\/])(.*)]], "%2")
+  return name
+end
+
 -- Required Lua source files.
 local lua_source_files = {}
 -- Libraries for required Lua binary modules.
@@ -95,9 +100,9 @@ for _, name in ipairs(arg) do
 
     local info = {}
     info.path = name
-    info.basename = io.popen("basename " .. info.path):read("*line")
+    info.basename = basename(info.path)
     info.basename_noextension = info.basename:match("(.+)%.")
-    info.dotpath = info.path:gsub("/", ".")
+    info.dotpath = info.path:gsub("[\\/]", ".")
     info.dotpath_noextension = info.dotpath:match("(.+)%.")
     info.dotpath_underscore = info.dotpath_noextension:gsub("[.-]", "_")
 
