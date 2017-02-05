@@ -331,7 +331,7 @@ for i, file in ipairs(lua_source_files) do
   local prefix = f:read(4)
   if prefix then
     if prefix:match("\xef\xbb\xbf") then
-      -- Strip UTF-8 the byte order mark.
+      -- Strip the UTF-8 byte order mark.
       prefix = prefix:sub(4)
     end
     if prefix:match("#") then
