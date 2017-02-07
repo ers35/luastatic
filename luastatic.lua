@@ -22,9 +22,9 @@ Run a shell command, wait for it to finish, and return a string containing stdou
 local function shellout(cmd)
   local f = io.popen(cmd)
   local str = f:read("*all")
-  local ok, errstr, errnum = f:close()
+  local ok = f:close()
   if ok then
-    return str, errnum
+    return str
   end
   return nil
 end
@@ -129,9 +129,9 @@ for _, name in ipairs(arg) do
         end
       end
       if is_module then
-        table.insert(module_link_libraries, info)
+        table.insert(module_link_libraries, info.path)
       else
-        table.insert(dep_library_files, info)
+        table.insert(dep_library_files, info.path)
       end
     end
   else
@@ -161,7 +161,7 @@ Generate a C program containing the Lua source files that uses the Lua C API to
 initialize any Lua libraries and run the program.
 --]]
 local outfile = io.open(mainlua.path .. ".c", "w+")
-function out(...)
+local function out(...)
   outfile:write(...)
 end
 
@@ -387,19 +387,13 @@ if shellout(CC .. " -dumpmachine"):match("mingw") then
   binary_extension = ".exe"
 end
 
-local link_libraries = {}
-for _, library in ipairs(module_link_libraries) do
-  table.insert(link_libraries, library.path)
-end
-for _, library in ipairs(dep_library_files) do
-  table.insert(link_libraries, library.path)
-end
-
 local compile_command = table.concat({
   CC,
   "-Os",
   mainlua.path .. ".c",
-  table.concat(link_libraries, " "),
+  -- Link with Lua modules first to avoid linking errors.
+  table.concat(module_link_libraries, " "),
+  table.concat(dep_library_files, " "),
   rdynamic,
  "-lm",
   link_with_libdl,

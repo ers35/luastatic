@@ -15,9 +15,6 @@ multiple.dots: luastatic
 	cd test && ../luastatic multiple.dots.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 hypen-: luastatic
 	cd test && ../luastatic hypen-.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
-sql: luastatic
-	cd test && ../luastatic sql.lua $(LIBLUA_A) lsqlite3.a \
-	/usr/lib/x86_64-linux-gnu/libsqlite3.a -pthread -I$(LUA_INCLUDE) $(CFLAGS)
 require1: luastatic
 	cd test && ../luastatic require1.lua require2.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 subdir: luastatic
