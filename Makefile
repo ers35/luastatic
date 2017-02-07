@@ -64,6 +64,9 @@ compiler_not_found: luastatic
 	cd test && \
 	if CC="sds43fq1z7sfw" ../luastatic hello.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS) ; \
 	then false ; else true ; fi
+precompiled_chunk: luastatic
+	cd test && luac5.2 -o precompiled_chunk.luac precompiled_chunk.lua && \
+	../luastatic precompiled_chunk.luac $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 
 test:
 	LUA=lua5.1 make -j5 run_test
@@ -95,7 +98,9 @@ run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multipl
 clean:
 	rm -f *.lua.c luastatic
 	find test/ -type f -executable | xargs rm -f
-	find test/ -name *.lua.c | xargs rm -f
-	find test/ -name *.o | xargs rm -f
-	find test/ -name *.a | xargs rm -f
-	find test/ -name *.so | xargs rm -f
+	find test/ -type f -name *.lua.c | xargs rm -f
+	find test/ -type f -name *.luac.c | xargs rm -f
+	find test/ -type f -name *.luac | xargs rm -f
+	find test/ -type f -name *.o | xargs rm -f
+	find test/ -type f -name *.a | xargs rm -f
+	find test/ -type f -name *.so | xargs rm -f

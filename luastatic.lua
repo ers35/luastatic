@@ -57,6 +57,13 @@ local function basename(path)
   return name
 end
 
+local function is_source_file(extension)
+  return
+    extension == "lua" or
+    -- Precompiled chunk.
+    extension == "luac"
+end
+
 local function is_binary_library(extension)
   return 
     -- Static library.
@@ -86,7 +93,7 @@ appear.
 --]]
 for _, name in ipairs(arg) do
   local extension = name:match("%.(%a+)$")
-  if extension == "lua" or is_binary_library(extension) then
+  if is_source_file(extension) or is_binary_library(extension) then
     if not file_exists(name) then
       io.stderr:write("file does not exist: " .. name .. "\n")
       os.exit(1)
@@ -100,7 +107,7 @@ for _, name in ipairs(arg) do
     info.dotpath_noextension = info.dotpath:match("(.+)%.")
     info.dotpath_underscore = info.dotpath_noextension:gsub("[.-]", "_")
 
-    if extension == "lua" then
+    if is_source_file(extension) then
       table.insert(lua_source_files, info)
     elseif is_binary_library(extension) then
       -- The library is either a Lua module or a library dependency.
