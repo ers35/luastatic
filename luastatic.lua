@@ -148,7 +148,7 @@ for _, name in ipairs(arg) do
 end
 
 if #lua_source_files == 0 then
-  local version = "0.0.6"
+  local version = "0.0.7-dev"
   print("luastatic " .. version)
   print([[
 usage: luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] [6]
@@ -404,8 +404,8 @@ local compile_command = table.concat({
   rdynamic,
  "-lm",
   link_with_libdl,
-  table.concat(otherflags, " "),
   "-o " .. mainlua.basename_noextension .. binary_extension,
+  table.concat(otherflags, " "),
 }, " ")
 print(compile_command)
 local ok = execute(compile_command)
