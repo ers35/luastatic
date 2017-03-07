@@ -265,7 +265,7 @@ local function load_string(str, name)
 end
 
 local function lua_loader(name)
-  local source = lua_bundle[name]
+  local source = lua_bundle[name] or lua_bundle[name .. ".init"]
   if source then
     local chunk = load_string(source, name)
     return chunk

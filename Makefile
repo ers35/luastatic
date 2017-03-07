@@ -67,16 +67,20 @@ compiler_not_found: luastatic
 precompiled_chunk: luastatic
 	cd test && luac5.2 -o precompiled_chunk.luac precompiled_chunk.lua && \
 	../luastatic precompiled_chunk.luac $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
+init: luastatic
+	cd test && ../luastatic init_.lua foo/init.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 
 test:
 	LUA=lua5.1 make -j5 run_test
 	LUA=lua5.2 make -j5 run_test
+	LUA=lua5.2 make -j5 run_test_5_2
 	LUA=lua5.3 make -j5 run_test
+	LUA=lua5.3 make -j5 run_test_5_3
 	LUA=luajit LIBLUA_A=/usr/lib/x86_64-linux-gnu/libluajit-5.1.a \
 		LUA_INCLUDE=/usr/include/luajit-2.0 CFLAGS="-no-pie" make -j5 run_test
 
 run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
-	binmodule_so_ binmodule_dots bom shebang shebang_nonewline bom_shebang \
+	binmodule_so_ binmodule_dots shebang shebang_nonewline \
 	empty subdir_binmodule mangled disable_compiling compiler_not_found
 	./test/hello
 	./test/multiple.dots
@@ -87,13 +91,18 @@ run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multipl
 	cd test && ./binmodule_so_
 	./test/binmodule_multiple
 	./test/binmodule_dots
-	# Lua 5.1 does not support BOM
-	./test/bom || true
-	./test/bom_shebang || true
 	./test/shebang
 	./test/shebang_nonewline
 	./test/empty
 	./test/subdir_binmodule
+	
+run_test_5_2: bom bom_shebang
+	# Lua 5.1 does not support BOM
+	./test/bom
+	
+run_test_5_3: bom bom_shebang init
+	# Only Lua 5.3 looks for init.lua in a relative subdirectory
+	./test/init_
 
 clean:
 	rm -f *.lua.c luastatic
