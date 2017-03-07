@@ -39,14 +39,25 @@ local function execute(cmd)
 end
 
 --[[
-Create a hex string from the characters of a string.
+Create a C hex string from the characters of a Lua string.
 --]]
-local function string_to_hex(characters)
+local function string_to_hex_literal(characters)
   local hex = {}
   for character in characters:gmatch(".") do
     table.insert(hex, ("0x%02x"):format(string.byte(character)))
   end
   return table.concat(hex, ", ")
+end
+
+--[[
+Create a Lua decimal string from the characters of a Lua string.
+--]]
+local function string_to_decimal_literal(characters)
+  local hex = {}
+  for character in characters:gmatch(".") do
+    table.insert(hex, ("\\%i"):format(string.byte(character)))
+  end
+  return table.concat(hex, "")
 end
 
 --[[
@@ -171,6 +182,9 @@ local outfile = io.open(mainlua.path .. ".c", "w+")
 local function out(...)
   outfile:write(...)
 end
+local function outhex(str)
+  outfile:write(string_to_hex_literal(str), ", ")
+end
 
 out([[
 #include <assert.h>
@@ -191,52 +205,84 @@ extern "C" {
   #define LUA_OK 0
 #endif
 
-#define arraylen(array) (sizeof(array) / sizeof(array[0]))
-
-struct module
-{
-  const char *name;
-  const unsigned char *buf;
-  const unsigned int len;
-};
+static const char lua_loader_program[] = {
 ]])
 
-out("extern const struct module lua_bundle[", #lua_source_files, "];", "\n\n");
+--[[
+Embed Lua program source code.
+--]]
+local function outhex_lua_source(file)
+  local f = io.open(file.path, "r")
+  local prefix = f:read(4)
+  if prefix then
+    if prefix:match("\xef\xbb\xbf") then
+      -- Strip the UTF-8 byte order mark.
+      prefix = prefix:sub(4)
+    end
+    if prefix:match("#") then
+      -- Strip the shebang.
+      f:read("*line")
+      prefix = nil
+    end
+    if prefix then
+      outhex(string_to_decimal_literal(prefix))
+    end
+  end
+  while true do
+    local strdata = f:read(4096)
+    if strdata then
+      outhex(string_to_decimal_literal(strdata))
+    else
+      break
+    end
+  end
+  f:close()
+end
+
+outhex([[
+local lua_bundle = {
+]])
+for i, file in ipairs(lua_source_files) do
+  outhex('["')
+  outhex(file.dotpath_noextension)
+  outhex('"] = "')
+  outhex_lua_source(file)
+  outhex('",\n')
+end
+outhex([[
+}
+]])
+
+outhex([[
+local function load_string(str, name)
+  if _VERSION == "Lua 5.1" then
+    local chunk = loadstring(str, name)
+    return chunk
+  else
+    local chunk = load(str, name)
+    return chunk
+  end
+end
+
+local function lua_loader(name)
+  local source = lua_bundle[name]
+  if source then
+    local chunk = load_string(source, name)
+    return chunk
+  end
+end
+table.insert(package.loaders or package.searchers, 2, lua_loader)
+]])
+
+outhex(([[
+-- Run the main Lua program.
+local chunk = load_string(lua_bundle["%s"], "%s")
+chunk()
+]]):format(mainlua.basename_noextension, mainlua.basename_noextension))
 
 out([[
-/* Try to load the module from lua_bundle when require() is called. */
-static int lua_loader(lua_State *l)
-{
-  size_t namelen;
-  const char *modname = lua_tolstring(l, -1, &namelen);
-  const struct module *mod = NULL;
-  int i = 0;
-  for (; i < arraylen(lua_bundle); ++i)
-  {
-    if
-    (
-      namelen == strlen(lua_bundle[i].name) && 
-      memcmp(modname, lua_bundle[i].name, namelen) == 0
-    )
-    {
-      mod = &lua_bundle[i];
-      break;
-    }
-  }
-  if (!mod)
-  {
-    /* Module not found. */
-    lua_pushnil(l);
-    return 1;
-  }
-  if (luaL_loadbuffer(l, (const char*)mod->buf, mod->len, mod->name) != LUA_OK)
-  {
-    printf("luaL_loadstring: %s %s\n", lua_tostring(l, 1), lua_tostring(l, 2));
-    lua_close(l);
-    exit(1);
-  }
-  return 1;
-}
+
+};
 
 /* Copied from lua.c */
 static void createargtable (lua_State *L, char **argv, int argc, int script) {
@@ -276,27 +322,8 @@ int main(int argc, char *argv[])
 {
   lua_State *L = luaL_newstate();
   luaL_openlibs(L);
-  
-  /* Add the loader to package.searchers after the package.preload loader. */
-  lua_getglobal(L, "table");
-  lua_getfield(L, -1, "insert");
-  /* remove "table" */
-  lua_remove(L, -2);
-  assert(lua_isfunction(L, -1));
-  lua_getglobal(L, "package");
-#if LUA_VERSION_NUM == 501
-  lua_getfield(L, -1, "loaders");
-#else
-  lua_getfield(L, -1, "searchers");
-#endif
-  /* Remove the package table from the stack. */
-  lua_remove(L, -2);
-  lua_pushnumber(L, 2);
-  lua_pushcfunction(L, lua_loader);
-  /* table.insert(package.searchers, 2, lua_loader); */
-  lua_call(L, 3, 0);
-  assert(lua_gettop(L) == 0);
-]]);
+  createargtable(L, argv, argc, 0);
+]])
 
 for _, library in ipairs(module_library_files) do
   out(('  int luaopen_%s(lua_State *L);\n'):format(library.dotpath_underscore))
@@ -306,74 +333,26 @@ for _, library in ipairs(module_library_files) do
   out('  lua_pop(L, 1);\n\n')
 end
 
-out(([[
-  /* Run the main Lua program. */
-  if (luaL_loadbuffer(L, (const char*)lua_bundle[0].buf, lua_bundle[0].len, "%s"))
+out(([[  
+  //printf("%%.*s", (int)sizeof(lua_loader_program), lua_loader_program);
+  if (luaL_loadbuffer(L, lua_loader_program, sizeof(lua_loader_program), "%s") != LUA_OK)
   {
-    /* Print the error message. */
-    puts(lua_tostring(L, 1));
+    printf("luaL_loadstring: %%s %%s\n", lua_tostring(L, 1), lua_tostring(L, 2));
     lua_close(L);
-    return 1;
+    exit(1);
   }
-  createargtable(L, argv, argc, 0);
   int err = lua_pcall(L, 0, LUA_MULTRET, 0);
   if (err != LUA_OK)
   {
     puts(lua_tostring(L, 1));
     lua_close(L);
     return 1;
-  }
+  }  
   lua_close(L);
   return 0;
 }
+]]):format(mainlua.basename_noextension));
 
-]]):format(mainlua.basename))
-
---[[
-Embed Lua source code in the C program.
---]]
-for i, file in ipairs(lua_source_files) do
-  out("static const unsigned char lua_require_", i, "[] = {\n  ")
-  local f = io.open(file.path, "r")
-  local prefix = f:read(4)
-  if prefix then
-    if prefix:match("\xef\xbb\xbf") then
-      -- Strip the UTF-8 byte order mark.
-      prefix = prefix:sub(4)
-    end
-    if prefix:match("#") then
-      -- Strip the shebang.
-      f:read("*line")
-      prefix = nil
-    end
-    if prefix then
-      out(string_to_hex(prefix), ", ")
-    end
-  end
-  while true do
-    local strdata = f:read(4096)
-    if strdata then
-      out(string_to_hex(strdata), ", ")
-    else
-      break
-    end
-  end
-  out("\n};\n")
-  f:close()
-end
-
-out([[
-const struct module lua_bundle[] = 
-{
-]]);
-for i, file in ipairs(lua_source_files) do
-  out(('  {"%s", lua_require_%s, sizeof(lua_require_%s)},\n'):format(
-    file.dotpath_noextension, i, i
-  ))
-end
-out("};")
-
-out("\n")
 outfile:close()
 
 if os.getenv("CC") == "" then
