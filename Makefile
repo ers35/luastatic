@@ -69,6 +69,8 @@ precompiled_chunk: luastatic
 	../luastatic precompiled_chunk.luac $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 init: luastatic
 	cd test && ../luastatic init_.lua foo/init.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
+error: luastatic
+	cd test && ../luastatic error_.lua error.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 
 test:
 	LUA=lua5.1 make -j5 run_test
