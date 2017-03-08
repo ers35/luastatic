@@ -271,7 +271,8 @@ local function lua_loader(name)
       return chunk
     else
       error(
-        ("error loading module '%s' from luastatic bundle:\n\t %s"):format(name, errstr)
+        ("error loading module '%s' from luastatic bundle:\n\t%s"):format(name, errstr),
+        0
       )
     end
   else
@@ -287,7 +288,7 @@ local chunk, errstr = load_string(lua_bundle["%s"], "%s")
 if chunk then
   chunk()
 else
-  error(errstr)
+  error(errstr, 0)
 end
 ]]):format(mainlua.basename_noextension, mainlua.basename_noextension))
 
