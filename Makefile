@@ -71,6 +71,8 @@ init: luastatic
 	cd test && ../luastatic init_.lua foo/init.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 error: luastatic
 	cd test && ../luastatic error_.lua error.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
+main_in_dir:
+	./luastatic test/hello.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS) -o test/main_in_dir
 
 test:
 	LUA=lua5.1 make -j5 run_test
@@ -83,7 +85,7 @@ test:
 
 run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
 	binmodule_so_ binmodule_dots shebang shebang_nonewline \
-	empty subdir_binmodule mangled disable_compiling compiler_not_found
+	empty subdir_binmodule mangled disable_compiling compiler_not_found main_in_dir
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-
@@ -97,6 +99,7 @@ run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multipl
 	./test/shebang_nonewline
 	./test/empty
 	./test/subdir_binmodule
+	./test/main_in_dir
 	
 run_test_5_2: bom bom_shebang
 	# Lua 5.1 does not support BOM
