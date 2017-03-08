@@ -287,7 +287,7 @@ if chunk then
 else
   error(errstr)
 end
-]]):format(mainlua.basename_noextension, mainlua.basename_noextension))
+]]):format(mainlua.dotpath_noextension, mainlua.basename_noextension))
 
 out([[
 
