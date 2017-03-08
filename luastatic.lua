@@ -223,11 +223,9 @@ local function outhex_lua_source(file)
     if prefix:match("#") then
       -- Strip the shebang.
       f:read("*line")
-      prefix = nil
+      prefix = "\n"
     end
-    if prefix then
-      outhex(string_to_decimal_literal(prefix))
-    end
+    outhex(string_to_decimal_literal(prefix))
   end
   while true do
     local strdata = f:read(4096)
