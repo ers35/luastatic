@@ -272,6 +272,8 @@ local function lua_loader(name)
         ("error loading module '%s' from luastatic bundle:\n\t %s"):format(name, errstr)
       )
     end
+  else
+    return ("\n\tno module '%s' in luastatic bundle"):format(name)
   end
 end
 table.insert(package.loaders or package.searchers, 2, lua_loader)
