@@ -71,7 +71,7 @@ init: luastatic
 	cd test && ../luastatic init_.lua foo/init.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 error: luastatic
 	cd test && ../luastatic error_.lua error.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
-main_in_dir:
+main_in_dir: luastatic
 	./luastatic test/hello.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS) -o test/main_in_dir
 
 test:
