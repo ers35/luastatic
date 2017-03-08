@@ -352,13 +352,13 @@ static int msghandler (lua_State *L) {
       msg = lua_pushfstring(L, "(error object is a %s value)",
                                luaL_typename(L, 1));
   }
-  // Call debug.traceback() instead of luaL_traceback() for Lua 5.1 compatibility.
+  /* Call debug.traceback() instead of luaL_traceback() for Lua 5.1 compatibility. */
   lua_getglobal(L, "debug");
   lua_getfield(L, -1, "traceback");
-  // debug
+  /* debug */
   lua_remove(L, -2);
   lua_pushstring(L, msg);
-  // original msg
+  /* original msg */
   lua_remove(L, -3);
   lua_pushinteger(L, 2);  /* skip this function and traceback */
   lua_call(L, 2, 1); /* call debug.traceback */
@@ -395,7 +395,7 @@ for _, library in ipairs(module_library_files) do
 end
 
 out(([[  
-  //printf("%%.*s", (int)sizeof(lua_loader_program), lua_loader_program);
+  /*printf("%%.*s", (int)sizeof(lua_loader_program), lua_loader_program);*/
   if (luaL_loadbuffer(L, lua_loader_program, sizeof(lua_loader_program), "%s") != LUA_OK)
   {
     fprintf(stderr, "luaL_loadstring: %%s %%s\n", lua_tostring(L, 1), lua_tostring(L, 2));
