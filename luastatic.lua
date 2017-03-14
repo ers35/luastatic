@@ -8,9 +8,9 @@ local CC = os.getenv("CC") or "cc"
 local NM = os.getenv("NM") or "nm"
 
 local function file_exists(name)
-  local f = io.open(name, "r")
-  if f then
-    f:close()
+  local file = io.open(name, "r")
+  if file then
+    file:close()
     return true
   end
   return false
@@ -19,12 +19,12 @@ end
 --[[
 Run a shell command, wait for it to finish, and return a string containing stdout.
 --]]
-local function shellout(cmd)
-  local f = io.popen(cmd)
-  local str = f:read("*all")
-  local ok = f:close()
+local function shellout(command)
+  local file = io.popen(command)
+  local stdout = file:read("*all")
+  local ok = file:close()
   if ok then
-    return str
+    return stdout
   end
   return nil
 end
@@ -39,37 +39,30 @@ local function execute(cmd)
 end
 
 --[[
-Create a C hex string from the characters of a Lua string.
+Return a comma separated hex string suitable for a C array definition.
 --]]
-local function string_to_hex_literal(characters)
+local function string_to_c_hex_literal(characters)
   local hex = {}
   for character in characters:gmatch(".") do
     table.insert(hex, ("0x%02x"):format(string.byte(character)))
   end
   return table.concat(hex, ", ")
 end
+assert(string_to_c_hex_literal("hello") == "0x68, 0x65, 0x6c, 0x6c, 0x6f")
 
 --[[
-Create a Lua decimal string from the characters of a Lua string.
---]]
-local function string_to_decimal_literal(characters)
-  local hex = {}
-  for character in characters:gmatch(".") do
-    table.insert(hex, ("\\%i"):format(string.byte(character)))
-  end
-  return table.concat(hex, "")
-end
-
---[[
-/path/to/file.lua -> file.lua
+Strip the directory from a filename.
 --]]
 local function basename(path)
   local name = path:gsub([[(.*[\/])(.*)]], "%2")
   return name
 end
+assert(basename("/path/to/file.lua") == "file.lua")
+assert(basename([[C:\path\to\file.lua]]) == "file.lua")
 
 local function is_source_file(extension)
   return
+    -- Source file.
     extension == "lua" or
     -- Precompiled chunk.
     extension == "luac"
@@ -93,7 +86,7 @@ local module_link_libraries = {}
 -- Libraries other than Lua binary modules, including liblua.
 local dep_library_files = {}
 -- Additional arguments are passed to the C compiler.
-local otherflags = {}
+local other_arguments = {}
 local link_with_libdl = ""
 
 --[[
@@ -153,8 +146,8 @@ for _, name in ipairs(arg) do
       end
     end
   else
-    -- Forward remaining arguments as flags to cc.
-    table.insert(otherflags, name)
+    -- Forward the remaining arguments to the C compiler.
+    table.insert(other_arguments, name)
   end
 end
 
@@ -183,7 +176,36 @@ local function out(...)
   outfile:write(...)
 end
 local function outhex(str)
-  outfile:write(string_to_hex_literal(str), ", ")
+  outfile:write(string_to_c_hex_literal(str), ", ")
+end
+
+--[[
+Embed Lua program source code.
+--]]
+local function out_lua_source(file)
+  local f = io.open(file.path, "r")
+  local prefix = f:read(4)
+  if prefix then
+    if prefix:match("\xef\xbb\xbf") then
+      -- Strip the UTF-8 byte order mark.
+      prefix = prefix:sub(4)
+    end
+    if prefix:match("#") then
+      -- Strip the shebang.
+      f:read("*line")
+      prefix = "\n"
+    end
+    out(string_to_c_hex_literal(prefix), ", ")
+  end
+  while true do
+    local strdata = f:read(4096)
+    if strdata then
+      out(string_to_c_hex_literal(strdata), ", ")
+    else
+      break
+    end
+  end
+  f:close()
 end
 
 out([[
@@ -205,38 +227,6 @@ extern "C" {
 #if LUA_VERSION_NUM == 501
   #define LUA_OK 0
 #endif
-]])
-
---[[
-Embed Lua program source code.
---]]
-local function out_lua_source(file)
-  local f = io.open(file.path, "r")
-  local prefix = f:read(4)
-  if prefix then
-    if prefix:match("\xef\xbb\xbf") then
-      -- Strip the UTF-8 byte order mark.
-      prefix = prefix:sub(4)
-    end
-    if prefix:match("#") then
-      -- Strip the shebang.
-      f:read("*line")
-      prefix = "\n"
-    end
-    out(string_to_hex_literal(prefix), ", ")
-  end
-  while true do
-    local strdata = f:read(4096)
-    if strdata then
-      out(string_to_hex_literal(strdata), ", ")
-    else
-      break
-    end
-  end
-  f:close()
-end
-
-out([[
 
 /* Copied from lua.c */
 
@@ -361,8 +351,9 @@ out(([[
   /*printf("%%.*s", (int)sizeof(lua_loader_program), lua_loader_program);*/
   if
   (
-    luaL_loadbuffer(L, (const char*)lua_loader_program, sizeof(lua_loader_program), "%s"
-  ) != LUA_OK)
+    luaL_loadbuffer(L, (const char*)lua_loader_program, sizeof(lua_loader_program), "%s") 
+    != LUA_OK
+  )
   {
     fprintf(stderr, "luaL_loadbuffer: %%s\n", lua_tostring(L, -1));
     lua_close(L);
@@ -436,7 +427,7 @@ local compile_command = table.concat({
  "-lm",
   link_with_libdl,
   "-o " .. mainlua.basename_noextension .. binary_extension,
-  table.concat(otherflags, " "),
+  table.concat(other_arguments, " "),
 }, " ")
 print(compile_command)
 local ok = execute(compile_command)
