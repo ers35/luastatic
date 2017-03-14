@@ -114,8 +114,11 @@ run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multipl
 run_test_5_2: bom bom_shebang
 	# Lua 5.1 does not support BOM
 	./test/bom
+	./test/bom_shebang
 	
 run_test_5_3: bom bom_shebang init
+	./test/bom
+	./test/bom_shebang
 	# Only Lua 5.3 looks for init.lua in a relative subdirectory
 	./test/init_
 
