@@ -1,3 +1,4 @@
+-- require("foo")
 -- print(pcall(require, "error"))
 -- syntax error
 

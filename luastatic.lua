@@ -159,7 +159,7 @@ for _, name in ipairs(arg) do
 end
 
 if #lua_source_files == 0 then
-  local version = "0.0.7"
+  local version = "0.0.8-dev"
   print("luastatic " .. version)
   print([[
 usage: luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] [6]
@@ -205,14 +205,12 @@ extern "C" {
 #if LUA_VERSION_NUM == 501
   #define LUA_OK 0
 #endif
-
-static const char lua_loader_program[] = {
 ]])
 
 --[[
 Embed Lua program source code.
 --]]
-local function outhex_lua_source(file)
+local function out_lua_source(file)
   local f = io.open(file.path, "r")
   local prefix = f:read(4)
   if prefix then
@@ -225,12 +223,12 @@ local function outhex_lua_source(file)
       f:read("*line")
       prefix = "\n"
     end
-    outhex(string_to_decimal_literal(prefix))
+    out(string_to_hex_literal(prefix), ", ")
   end
   while true do
     local strdata = f:read(4096)
     if strdata then
-      outhex(string_to_decimal_literal(strdata))
+      out(string_to_hex_literal(strdata), ", ")
     else
       break
     end
@@ -238,82 +236,7 @@ local function outhex_lua_source(file)
   f:close()
 end
 
-outhex([[
-local lua_bundle = {
-]])
-for i, file in ipairs(lua_source_files) do
-  outhex('["')
-  outhex(file.dotpath_noextension)
-  outhex('"] = "')
-  outhex_lua_source(file)
-  outhex('",\n')
-end
-outhex([[
-}
-]])
-
-outhex([[
-local function load_string(str, name)
-  if _VERSION == "Lua 5.1" then
-    return loadstring(str, name)
-  else
-    return load(str, name)
-  end
-end
-
-local function lua_loader(name)
-  local source = lua_bundle[name] or lua_bundle[name .. ".init"]
-  if source then
-    local chunk, errstr = load_string(source, name)
-    if chunk then
-      return chunk
-    else
-      error(
-        ("error loading module '%s' from luastatic bundle:\n\t%s"):format(name, errstr),
-        0
-      )
-    end
-  else
-    return ("\n\tno module '%s' in luastatic bundle"):format(name)
-  end
-end
-table.insert(package.loaders or package.searchers, 2, lua_loader)
-]])
-
-outhex(([[
--- Run the main Lua program.
-local chunk, errstr = load_string(lua_bundle["%s"], "%s")
-if chunk then
-  chunk()
-else
-  error(errstr, 0)
-end
-]]):format(mainlua.dotpath_noextension, mainlua.basename_noextension))
-
 out([[
-
-};
-
-#if LUA_VERSION_NUM == 501
-/* Copied from https://github.com/keplerproject/lua-compat-5.2 */
-static void luaL_requiref (lua_State *L, char const* modname,
-                    lua_CFunction openf, int glb) {
-  luaL_checkstack(L, 3, "not enough stack slots");
-  lua_pushcfunction(L, openf);
-  lua_pushstring(L, modname);
-  lua_call(L, 1, 1);
-  lua_getglobal(L, "package");
-  lua_getfield(L, -1, "loaded");
-  lua_replace(L, -2);
-  lua_pushvalue(L, -2);
-  lua_setfield(L, -2, modname);
-  lua_pop(L, 1);
-  if (glb) {
-    lua_pushvalue(L, -1);
-    lua_setglobal(L, modname);
-  }
-}
-#endif
 
 /* Copied from lua.c */
 
@@ -384,30 +307,95 @@ int main(int argc, char *argv[])
   luaL_openlibs(L);
   createargtable(L, argv, argc, 0);
 
-]])
+  static const unsigned char lua_loader_program[] = {
+    ]])
 
-for _, library in ipairs(module_library_files) do
-  out(('  int luaopen_%s(lua_State *L);\n'):format(library.dotpath_underscore))
-  out(('  luaL_requiref(L, "%s", luaopen_%s, 0);\n'):format(
-    library.dotpath_noextension, library.dotpath_underscore
-  ))
-  out('  lua_pop(L, 1);\n')
+outhex([[
+local args = {...}
+local lua_bundle = args[1]
+
+local function load_string(str, name)
+  if _VERSION == "Lua 5.1" then
+    return loadstring(str, name)
+  else
+    return load(str, name)
+  end
 end
 
-out(([[  
+local function lua_loader(name)
+  local mod = lua_bundle[name] or lua_bundle[name .. ".init"]
+  if mod then
+    if type(mod) == "string" then
+      local chunk, errstr = load_string(mod, name)
+      if chunk then
+        return chunk
+      else
+        error(
+          ("error loading module '%s' from luastatic bundle:\n\t%s"):format(name, errstr),
+          0
+        )
+      end
+    elseif type(mod) == "function" then
+      return mod
+    end
+  else
+    return ("\n\tno module '%s' in luastatic bundle"):format(name)
+  end
+end
+table.insert(package.loaders or package.searchers, 2, lua_loader)
+]])
+
+outhex(([[
+local func = lua_loader("%s")
+if type(func) == "function" then
+  -- Run the main Lua program.
+  func()
+else
+  error(func, 0)
+end
+]]):format(mainlua.dotpath_noextension))
+
+out(([[
+
+  };
   /*printf("%%.*s", (int)sizeof(lua_loader_program), lua_loader_program);*/
-  if (luaL_loadbuffer(L, lua_loader_program, sizeof(lua_loader_program), "%s") != LUA_OK)
+  if
+  (
+    luaL_loadbuffer(L, (const char*)lua_loader_program, sizeof(lua_loader_program), "%s"
+  ) != LUA_OK)
   {
-    fprintf(stderr, "luaL_loadstring: %%s %%s\n", lua_tostring(L, 1), lua_tostring(L, 2));
+    fprintf(stderr, "luaL_loadbuffer: %%s\n", lua_tostring(L, -1));
     lua_close(L);
     return 1;
   }
-  if (docall(L, 0, LUA_MULTRET))
+  
+  /* lua_bundle */
+  lua_newtable(L);
+]]):format(mainlua.basename_noextension));
+
+for i, file in ipairs(lua_source_files) do
+  out(('  static const unsigned char lua_require_%i[] = {\n    '):format(i))
+  out_lua_source(file);
+  out("\n  };\n")
+  out(([[
+  lua_pushlstring(L, (const char*)lua_require_%i, sizeof(lua_require_%i));
+]]):format(i, i))
+  out(('  lua_setfield(L, -2, "%s");\n\n'):format(file.dotpath_noextension))
+end
+
+for _, library in ipairs(module_library_files) do
+  out(('  int luaopen_%s(lua_State *L);\n'):format(library.dotpath_underscore))
+  out(('  lua_pushcfunction(L, luaopen_%s);\n'):format(library.dotpath_underscore))
+  out(('  lua_setfield(L, -2, "%s");\n\n'):format(library.dotpath_noextension))
+end
+
+out([[
+  if (docall(L, 1, LUA_MULTRET))
   {
     const char *errmsg = lua_tostring(L, 1);
     if (errmsg)
     {
-      fprintf(stderr, "%%s\n", errmsg);
+      fprintf(stderr, "%s\n", errmsg);
     }
     lua_close(L);
     return 1;
@@ -415,7 +403,7 @@ out(([[
   lua_close(L);
   return 0;
 }
-]]):format(mainlua.basename_noextension));
+]])
 
 outfile:close()
 
