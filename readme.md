@@ -46,3 +46,4 @@ See another example at [Lua.Space](http://lua.space/tools/build-a-standalone-exe
 
 ## Users
 - [Omnia](https://github.com/tongson/omnia)
+- [LuaCheck](https://github.com/mpeterv/luacheck)
