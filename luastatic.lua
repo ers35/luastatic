@@ -87,6 +87,8 @@ local module_link_libraries = {}
 local dep_library_files = {}
 -- Additional arguments are passed to the C compiler.
 local other_arguments = {}
+-- Get the operating system name.
+local UNAME = (shellout("uname -s") or "Unknown"):match("%a+") or "Unknown"
 local link_with_libdl = ""
 
 --[[
@@ -123,10 +125,13 @@ for _, name in ipairs(arg) do
       local is_module = false
       if nmout:find("T _?luaL_newstate") then
         if nmout:find("U _?dlopen") then
-          --[[
-          Link with libdl because liblua was built with support loading shared objects.
-          --]]
-          link_with_libdl = "-ldl"
+          if UNAME == "Linux" or UNAME == "SunOS" or UNAME == "Darwin" then
+            --[[
+            Link with libdl because liblua was built with support loading shared objects 
+            and the operating system depends on it.
+            --]]
+            link_with_libdl = "-ldl"
+          end
         end
       else
         for luaopen in nmout:gmatch("[^dD] _?luaopen_([%a%p%d]+)") do
@@ -152,7 +157,7 @@ for _, name in ipairs(arg) do
 end
 
 if #lua_source_files == 0 then
-  local version = "0.0.8"
+  local version = "0.0.9-dev"
   print("luastatic " .. version)
   print([[
 usage: luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] [6]
@@ -209,7 +214,6 @@ local function out_lua_source(file)
 end
 
 out([[
-#include <assert.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
