@@ -80,6 +80,8 @@ lazy_load_modules: luastatic
 		$(CFLAGS)
 utf8: luastatic
 	cd test && ../luastatic utf8.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
+stack: luastatic
+	cd test && ../luastatic stack.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
 
 test:
 	LUA=lua5.1 make -j5 run_test
@@ -93,7 +95,7 @@ test:
 run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
 	binmodule_so_ binmodule_dots shebang shebang_nonewline \
 	empty subdir_binmodule mangled disable_compiling compiler_not_found main_in_dir \
-	lazy_load_modules utf8
+	lazy_load_modules utf8 stack
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-
@@ -110,6 +112,7 @@ run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multipl
 	./test/main_in_dir
 	./test/lazy_load_modules
 	./test/utf8
+	./test/stack a b c
 	
 run_test_5_2: bom bom_shebang
 	# Lua 5.1 does not support BOM
