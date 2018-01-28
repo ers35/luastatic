@@ -46,5 +46,7 @@ See another example at [Lua.Space](http://lua.space/tools/build-a-standalone-exe
 
 ## Users
 - [Omnia](https://github.com/tongson/omnia)
-- [LuaCheck](https://github.com/mpeterv/luacheck)
+- [Luacheck](https://github.com/mpeterv/luacheck)
 - [Moonscript++](https://github.com/owenkimbrell/Moonscriptxx)
+- [d2info](https://github.com/squeek502/d2info)
+- [reslister](https://github.com/Metastruct/reslister)
