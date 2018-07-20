@@ -24,6 +24,22 @@ luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] 
 ### Embed library.lua for require("library")
 `luastatic main.lua library.lua /usr/lib/x86_64-linux-gnu/liblua5.2.a -I/usr/include/lua5.2`
 
+### Traverse all files in the directory for require 
+`luastatic main.lua --lib=lib /usr/lib/x86_64-linux-gnu/liblua5.2.a -I/usr/include/lua5.2`
+
+```
+# cat main.lua
+local m1 = require("lib.a.1")
+local m2 = require("lib.b.1")
+print("main end")
+# tree lib/
+lib/
+├── a
+│   └── 1.lua
+└── b
+    └── 1.lua
+```
+
 ### C library containing luaopen_()
 `luastatic main.lua library.a /usr/lib/x86_64-linux-gnu/liblua5.2.a -I/usr/include/lua5.2`
 
