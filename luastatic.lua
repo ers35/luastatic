@@ -77,7 +77,27 @@ local function is_binary_library(extension)
     -- Mach-O dynamic library.
     extension == "dylib"
 end
-
+local fileTable = {};
+local function getFileList(path)
+	local a = io.popen("ls "..path.."/");	
+	if a==nil then
+		
+	else
+		for line in a:lines() do
+			if line ~= "." and line ~= ".." then
+                local file = path.. '/' ..line
+                local d= os.execute("cd "..file.." >/dev/null 2>&1")  
+                if tonumber(d)==0 then
+                    getFileList(file)
+                else
+                    table.insert(fileTable,file)
+                end
+                
+            end
+		end
+	end
+	return fileTable;
+end
 -- Required Lua source files.
 local lua_source_files = {}
 -- Libraries for required Lua binary modules.
@@ -91,6 +111,52 @@ local other_arguments = {}
 local UNAME = (shellout("uname -s") or "Unknown"):match("%a+") or "Unknown"
 local link_with_libdl = ""
 
+local function create_lib_table(name,extension)
+  local info = {}
+  info.path = name
+  info.basename = basename(info.path)
+  info.basename_noextension = info.basename:match("(.+)%.")
+  info.dotpath = info.path:gsub("[\\/]", ".")
+  info.dotpath_noextension = info.dotpath:match("(.+)%.")
+  info.dotpath_underscore = info.dotpath_noextension:gsub("[.-]", "_")
+  if is_source_file(extension) then
+    table.insert(lua_source_files, info)
+  elseif is_binary_library(extension) then
+    -- The library is either a Lua module or a library dependency.
+    local nmout = shellout(NM .. " " .. info.path)
+    if not nmout then
+      io.stderr:write("nm not found\n")
+      os.exit(1)
+    end
+    local is_module = false
+    if nmout:find("T _?luaL_newstate") then
+      if nmout:find("U _?dlopen") then
+        if UNAME == "Linux" or UNAME == "SunOS" or UNAME == "Darwin" then
+          --[[
+          Link with libdl because liblua was built with support loading shared objects 
+          and the operating system depends on it.
+          --]]
+          link_with_libdl = "-ldl"
+        end
+      end
+    else
+      for luaopen in nmout:gmatch("[^dD] _?luaopen_([%a%p%d]+)") do
+        local modinfo = {}
+        modinfo.path = info.path
+        modinfo.dotpath_underscore = luaopen
+        modinfo.dotpath = modinfo.dotpath_underscore:gsub("_", ".")
+        modinfo.dotpath_noextension = modinfo.dotpath
+        is_module = true
+        table.insert(module_library_files, modinfo)
+      end
+    end
+    if is_module then
+      table.insert(module_link_libraries, info.path)
+    else
+      table.insert(dep_library_files, info.path)
+    end
+  end
+end
 --[[
 Parse command line arguments. main.lua must be the first argument. Static libraries are 
 passed to the compiler in the order they appear and may be interspersed with arguments to 
@@ -99,57 +165,27 @@ appear.
 --]]
 for _, name in ipairs(arg) do
   local extension = name:match("%.(%a+)$")
-  if is_source_file(extension) or is_binary_library(extension) then
+  local pre = name:match("--lib=(%a+)")
+  if is_source_file(extension) or is_binary_library(extension) or pre then
+    if pre then
+	name = pre
+    end
     if not file_exists(name) then
       io.stderr:write("file does not exist: " .. name .. "\n")
       os.exit(1)
     end
-
-    local info = {}
-    info.path = name
-    info.basename = basename(info.path)
-    info.basename_noextension = info.basename:match("(.+)%.")
-    info.dotpath = info.path:gsub("[\\/]", ".")
-    info.dotpath_noextension = info.dotpath:match("(.+)%.")
-    info.dotpath_underscore = info.dotpath_noextension:gsub("[.-]", "_")
-
-    if is_source_file(extension) then
-      table.insert(lua_source_files, info)
-    elseif is_binary_library(extension) then
-      -- The library is either a Lua module or a library dependency.
-      local nmout = shellout(NM .. " " .. info.path)
-      if not nmout then
-        io.stderr:write("nm not found\n")
-        os.exit(1)
+    if pre then
+      local names = getFileList(pre)
+      for k,v in ipairs(names) do
+        create_lib_table(v,v:match("%.(%a+)$"))
       end
-      local is_module = false
-      if nmout:find("T _?luaL_newstate") then
-        if nmout:find("U _?dlopen") then
-          if UNAME == "Linux" or UNAME == "SunOS" or UNAME == "Darwin" then
-            --[[
-            Link with libdl because liblua was built with support loading shared objects 
-            and the operating system depends on it.
-            --]]
-            link_with_libdl = "-ldl"
-          end
-        end
-      else
-        for luaopen in nmout:gmatch("[^dD] _?luaopen_([%a%p%d]+)") do
-          local modinfo = {}
-          modinfo.path = info.path
-          modinfo.dotpath_underscore = luaopen
-          modinfo.dotpath = modinfo.dotpath_underscore:gsub("_", ".")
-          modinfo.dotpath_noextension = modinfo.dotpath
-          is_module = true
-          table.insert(module_library_files, modinfo)
-        end
-      end
-      if is_module then
-        table.insert(module_link_libraries, info.path)
-      else
-        table.insert(dep_library_files, info.path)
-      end
+    else
+      create_lib_table(name,extension)
     end
+
+
+    
+  
   else
     -- Forward the remaining arguments to the C compiler.
     table.insert(other_arguments, name)
@@ -443,3 +479,4 @@ if ok then
 else
   os.exit(1)
 end
+
