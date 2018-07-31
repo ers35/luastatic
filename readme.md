@@ -39,6 +39,9 @@ luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] 
 ### LuaJIT 2.0.4 on Ubuntu 16.10
 `luastatic main.lua /usr/lib/x86_64-linux-gnu/libluajit-5.1.a -I/usr/include/luajit-2.0 -no-pie`
 
+### LuaJIT on macOS
+`luastatic main.lua /opt/local/lib/libluajit-5.1.a -I/opt/local/include/luajit-2.0 -pagezero_size 10000 -image_base 100000000`
+
 ### Generate the C file but don't compile it
 `CC="" luastatic main.lua`
 
