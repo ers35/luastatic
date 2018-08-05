@@ -90,7 +90,7 @@ test:
 	LUA=lua5.3 make -j5 run_test
 	LUA=lua5.3 make -j5 run_test_5_3
 	LUA=luajit LIBLUA_A=/usr/lib/x86_64-linux-gnu/libluajit-5.1.a \
-		LUA_INCLUDE=/usr/include/luajit-2.0 CFLAGS="-no-pie" make -j5 run_test
+		LUA_INCLUDE=/usr/include/luajit-2.1 CFLAGS="-no-pie" make -j5 run_test
 
 run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
 	binmodule_so_ binmodule_dots shebang shebang_nonewline \
