@@ -109,7 +109,12 @@ for _, name in ipairs(arg) do
     info.path = name
     info.basename = basename(info.path)
     info.basename_noextension = info.basename:match("(.+)%.")
-    info.dotpath = info.path:gsub("[\\/]", ".")
+    --[[
+    Handle the common case of "./path/to/file.lua".
+    This won't work in all cases.
+    --]]
+    info.dotpath = info.path:gsub("^%.%/", "")
+    info.dotpath = info.dotpath:gsub("[\\/]", ".")
     info.dotpath_noextension = info.dotpath:match("(.+)%.")
     info.dotpath_underscore = info.dotpath_noextension:gsub("[.-]", "_")
 
@@ -157,7 +162,7 @@ for _, name in ipairs(arg) do
 end
 
 if #lua_source_files == 0 then
-  local version = "0.0.9"
+  local version = "0.0.10-dev"
   print("luastatic " .. version)
   print([[
 usage: luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] [6]
