@@ -70,6 +70,8 @@ end
 
 local function is_binary_library(extension)
   return 
+    -- Object file.
+    extension == "o" or 
     -- Static library.
     extension == "a" or 
     -- Shared library.

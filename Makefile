@@ -24,6 +24,9 @@ binmodule: luastatic
 	cd test && cc -c -I$(LUA_INCLUDE) binmodule.c -o binmodule.o \
 	&& ar rcs binmodule.a binmodule.o && \
 	../luastatic binmodule.lua $(LIBLUA_A) binmodule.a -I$(LUA_INCLUDE) $(CFLAGS)
+binmodule_o: luastatic
+	cd test && cc -c -I$(LUA_INCLUDE) binmodule.c -o binmodule.o \
+	&& ../luastatic binmodule.lua $(LIBLUA_A) binmodule.o -I$(LUA_INCLUDE) $(CFLAGS) -o binmodule_o
 binmodule_so_: luastatic
 	cd test && cc -shared -fPIC -I$(LUA_INCLUDE) binmodule_so.c -o binmodule_so.so && \
 	../luastatic binmodule_so_.lua $(LIBLUA_A) -I$(LUA_INCLUDE) $(CFLAGS)
@@ -96,7 +99,7 @@ test:
 		LUA_INCLUDE=/usr/include/luajit-2.1 CFLAGS="-no-pie" make -j5 run_test
 
 run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
-	binmodule_so_ binmodule_dots shebang shebang_nonewline \
+	binmodule_o binmodule_so_ binmodule_dots shebang shebang_nonewline \
 	empty subdir_binmodule mangled disable_compiling compiler_not_found main_in_dir \
 	lazy_load_modules utf8 stack subdir_dot
 	./test/hello
@@ -105,6 +108,7 @@ run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multipl
 	./test/require1
 	./test/subdir
 	./test/binmodule
+	./test/binmodule_o
 	cd test && ./binmodule_so_
 	./test/binmodule_multiple
 	./test/binmodule_dots
