@@ -53,3 +53,6 @@ See another example at [Lua.Space](http://lua.space/tools/build-a-standalone-exe
 - [Moonscript++](https://github.com/owenkimbrell/Moonscriptxx)
 - [d2info](https://github.com/squeek502/d2info)
 - [reslister](https://github.com/Metastruct/reslister)
+- [aka](https://github.com/bonidjukic/aka)
+- [Thenafter](https://github.com/Jictyvoo/Thenafter)
+- [luatools](https://github.com/ennorehling/luatools)
