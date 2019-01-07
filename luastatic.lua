@@ -164,7 +164,7 @@ for _, name in ipairs(arg) do
 end
 
 if #lua_source_files == 0 then
-	local version = "0.0.10-dev"
+	local version = "0.0.10"
 	print("luastatic " .. version)
 	print([[
 usage: luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] [6]
