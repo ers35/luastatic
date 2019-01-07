@@ -273,8 +273,7 @@ static int msghandler (lua_State *L) {
 				lua_type(L, -1) == LUA_TSTRING)  /* that produces a string? */
 			return 1;  /* that is the message */
 		else
-			msg = lua_pushfstring(L, "(error object is a %s value)",
-															 luaL_typename(L, 1));
+			msg = lua_pushfstring(L, "(error object is a %s value)", luaL_typename(L, 1));
 	}
 	/* Call debug.traceback() instead of luaL_traceback() for Lua 5.1 compatibility. */
 	lua_getglobal(L, "debug");
