@@ -56,3 +56,4 @@ See another example at [Lua.Space](http://lua.space/tools/build-a-standalone-exe
 - [aka](https://github.com/bonidjukic/aka)
 - [Thenafter](https://github.com/Jictyvoo/Thenafter)
 - [luatools](https://github.com/ennorehling/luatools)
+- [ttslua-bundle](https://github.com/tjakubo2/ttslua-bundle)
