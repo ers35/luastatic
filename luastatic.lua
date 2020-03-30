@@ -224,7 +224,7 @@ out([[
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <lauxlib.h>
+#include <luaxlib.h>
 #include <lua.h>
 #include <lualib.h>
 #ifdef __cplusplus
