@@ -90,13 +90,13 @@ subdir_dot: luastatic
 		$(CFLAGS) -o subdir_dot
 
 test:
-	LUA=lua5.1 make -j5 run_test
-	LUA=lua5.2 make -j5 run_test
-	LUA=lua5.2 make -j5 run_test_5_2
-	LUA=lua5.3 make -j5 run_test
-	LUA=lua5.3 make -j5 run_test_5_3
+	LUA=lua5.1 make run_test
+	LUA=lua5.2 make run_test
+	LUA=lua5.2 make run_test_5_2
+	LUA=lua5.3 make run_test
+	LUA=lua5.3 make run_test_5_3
 	LUA=luajit LIBLUA_A=/usr/lib/x86_64-linux-gnu/libluajit-5.1.a \
-		LUA_INCLUDE=/usr/include/luajit-2.1 CFLAGS="-no-pie" make -j5 run_test
+		LUA_INCLUDE=/usr/include/luajit-2.1 CFLAGS="-no-pie" make run_test
 
 run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
 	binmodule_o binmodule_so_ binmodule_dots shebang shebang_nonewline \
