@@ -99,9 +99,9 @@ passed to the compiler in the order they appear and may be interspersed with arg
 the compiler. Arguments to the compiler are passed to the compiler in the order they 
 appear.
 --]]
-for _, name in ipairs(arg) do
+for i, name in ipairs(arg) do
 	local extension = name:match("%.(%a+)$")
-	if is_source_file(extension) or is_binary_library(extension) then
+	if i == 1 or (is_source_file(extension) or is_binary_library(extension)) then
 		if not file_exists(name) then
 			io.stderr:write("file does not exist: " .. name .. "\n")
 			os.exit(1)
@@ -110,17 +110,17 @@ for _, name in ipairs(arg) do
 		local info = {}
 		info.path = name
 		info.basename = basename(info.path)
-		info.basename_noextension = info.basename:match("(.+)%.")
+		info.basename_noextension = info.basename:match("(.+)%.") or info.basename
 		--[[
 		Handle the common case of "./path/to/file.lua".
 		This won't work in all cases.
 		--]]
 		info.dotpath = info.path:gsub("^%.%/", "")
 		info.dotpath = info.dotpath:gsub("[\\/]", ".")
-		info.dotpath_noextension = info.dotpath:match("(.+)%.")
+		info.dotpath_noextension = info.dotpath:match("(.+)%.") or info.dotpath
 		info.dotpath_underscore = info.dotpath_noextension:gsub("[.-]", "_")
 
-		if is_source_file(extension) then
+		if i == 1 or is_source_file(extension) then
 			table.insert(lua_source_files, info)
 		elseif is_binary_library(extension) then
 			-- The library is either a Lua module or a library dependency.
