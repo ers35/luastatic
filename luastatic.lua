@@ -183,7 +183,8 @@ local mainlua = lua_source_files[1]
 Generate a C program containing the Lua source files that uses the Lua C API to 
 initialize any Lua libraries and run the program.
 --]]
-local outfile = io.open(mainlua.path .. ".c", "w+")
+local outfilename = mainlua.basename_noextension .. ".luastatic.c"
+local outfile = io.open(outfilename, "w+")
 local function out(...)
 	outfile:write(...)
 end
@@ -432,7 +433,7 @@ end
 local compile_command = table.concat({
 	CC,
 	"-Os",
-	mainlua.path .. ".c",
+	outfilename,
 	-- Link with Lua modules first to avoid linking errors.
 	table.concat(module_link_libraries, " "),
 	table.concat(dep_library_files, " "),

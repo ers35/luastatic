@@ -134,11 +134,10 @@ run_test_5_3: bom bom_shebang init
 	./test/init_
 
 clean:
-	rm -f *.lua.c luastatic
+	rm -f *.luastatic.c luastatic
 	find test/ -type f -executable | xargs rm -f
-	find test/ -type f -name *.lua.c | xargs rm -f
-	find test/ -type f -name *.luac.c | xargs rm -f
-	find test/ -type f -name *.luac | xargs rm -f
-	find test/ -type f -name *.o | xargs rm -f
-	find test/ -type f -name *.a | xargs rm -f
-	find test/ -type f -name *.so | xargs rm -f
+	find test/ -type f -name "*.luastatic.c" | xargs rm -f
+	find test/ -type f -name "*.luac" | xargs rm -f
+	find test/ -type f -name "*.o" | xargs rm -f
+	find test/ -type f -name "*.a" | xargs rm -f
+	find test/ -type f -name "*.so" | xargs rm -f

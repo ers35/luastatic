@@ -1,4 +1,4 @@
-*.lua.c
+*.luastatic.c
 *.o
 *.a
 lua
