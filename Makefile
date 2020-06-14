@@ -20,6 +20,9 @@ require1: luastatic
 subdir: luastatic
 	cd test && ../luastatic subdir.lua subdirectory/test.lua $(LIBLUA_A) -I$(LUA_INCLUDE) \
 		$(CFLAGS)
+subdir_slash: luastatic
+	cd test && ../luastatic subdir_slash.lua subdirectory/test.lua $(LIBLUA_A) -I$(LUA_INCLUDE) \
+		$(CFLAGS)
 binmodule: luastatic
 	cd test && cc -c -I$(LUA_INCLUDE) binmodule.c -o binmodule.o \
 	&& ar rcs binmodule.a binmodule.o && \
@@ -101,7 +104,7 @@ test:
 run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multiple \
 	binmodule_o binmodule_so_ binmodule_dots shebang shebang_nonewline \
 	empty subdir_binmodule mangled disable_compiling compiler_not_found main_in_dir \
-	lazy_load_modules utf8 stack subdir_dot
+	lazy_load_modules utf8 stack subdir_dot subdir_slash
 	./test/hello
 	./test/multiple.dots
 	./test/hypen-
@@ -121,6 +124,7 @@ run_test: hello multiple.dots hypen- require1 subdir binmodule binmodule_multipl
 	./test/utf8
 	./test/stack a b c
 	./test/subdir_dot
+	./test/subdir_slash
 	
 run_test_5_2: bom bom_shebang
 	# Lua 5.1 does not support BOM

@@ -324,6 +324,8 @@ local function load_string(str, name)
 end
 
 local function lua_loader(name)
+	local separator = package.config:sub(1, 1)
+	name = name:gsub(separator, ".")
 	local mod = lua_bundle[name] or lua_bundle[name .. ".init"]
 	if mod then
 		if type(mod) == "string" then
