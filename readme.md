@@ -1,6 +1,6 @@
 `luastatic` is a command line tool that builds a standalone executable from a Lua 
-program. The executable runs on systems that do not have Lua installed. Lua 5.1, 5.2, 5.3 
-and LuaJIT are supported.
+program. The executable runs on systems that do not have Lua installed. Lua 5.1, 5.2, 
+5.3, 5.4, and LuaJIT are supported.
 
 ## Install
 Run luastatic.lua or install from [LuaRocks](http://luarocks.org/modules/ers35/luastatic).

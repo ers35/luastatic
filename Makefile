@@ -98,6 +98,7 @@ test:
 	LUA=lua5.2 make run_test_5_2
 	LUA=lua5.3 make run_test
 	LUA=lua5.3 make run_test_5_3
+	LUA=lua5.4 make run_test
 	LUA=luajit LIBLUA_A=/usr/lib/x86_64-linux-gnu/libluajit-5.1.a \
 		LUA_INCLUDE=/usr/include/luajit-2.1 CFLAGS="-no-pie" make run_test
 
