@@ -371,7 +371,7 @@ out(([[
 		!= LUA_OK
 	)
 	{
-		fprintf(stderr, "luaL_loadbuffer: %%s\n", lua_tostring(L, -1));
+		fprintf(stderr, "luaL_loadbuffer: %%%%s\n", lua_tostring(L, -1));
 		lua_close(L);
 		return 1;
 	}
