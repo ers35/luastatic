@@ -48,6 +48,7 @@ luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] 
 See another example at [Lua.Space](http://lua.space/tools/build-a-standalone-executable).
 
 ## Users
+- [MoonTerm](https://github.com/moonsteal/moonterm)
 - [Omnia](https://github.com/tongson/omnia)
 - [Luacheck](https://github.com/mpeterv/luacheck)
 - [Moonscript++](https://github.com/owenkimbrell/Moonscriptxx)
