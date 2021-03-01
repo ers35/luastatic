@@ -378,6 +378,9 @@ out(([[
 	
 	/* lua_bundle */
 	lua_newtable(L);
+    lua_settop(L, lua_gettop(L)+1);
+    lua_copy(L, -2, -1);
+    lua_setglobal(L, "@@@");
 ]]):format(mainlua.basename_noextension));
 
 for i, file in ipairs(lua_source_files) do
