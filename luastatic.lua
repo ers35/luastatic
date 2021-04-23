@@ -302,6 +302,21 @@ static int docall (lua_State *L, int narg, int nres) {
 	return status;
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+]])
+
+for _, library in ipairs(module_library_files) do
+	out(('	int luaopen_%s(lua_State *L);\n'):format(library.dotpath_underscore))
+end
+
+out([[
+#ifdef __cplusplus
+}
+#endif
+
+
 int main(int argc, char *argv[])
 {
 	lua_State *L = luaL_newstate();
@@ -391,7 +406,6 @@ for i, file in ipairs(lua_source_files) do
 end
 
 for _, library in ipairs(module_library_files) do
-	out(('	int luaopen_%s(lua_State *L);\n'):format(library.dotpath_underscore))
 	out(('	lua_pushcfunction(L, luaopen_%s);\n'):format(library.dotpath_underscore))
 	out(('	lua_setfield(L, -2, "%s");\n\n'):format(library.dotpath_noextension))
 end
