@@ -4,5 +4,5 @@
 // LUALIB_API is purposely not used here.
 int luaopen_mangled(lua_State *L)
 {
-  
+  return 0;
 }
