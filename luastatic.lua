@@ -6,6 +6,8 @@
 local CC = os.getenv("CC") or "cc"
 -- The nm used to determine whether a library is liblua or a Lua binary module.
 local NM = os.getenv("NM") or "nm"
+-- The lua source prefix for adjust libname
+local SOURCE_PATH = os.getenv("LUASTATIC_SOURCE_PATH") or ""
 
 local function file_exists(name)
 	local file = io.open(name, "r")
@@ -80,6 +82,23 @@ local function is_binary_library(extension)
 		extension == "dylib"
 end
 
+-- Prepare project prefix for adjust source path.
+local lua_source_prefixes = {}
+for v in SOURCE_PATH:gmatch("([^;]-);") do
+	lua_source_prefixes[#lua_source_prefixes + 1] = v:gsub("[\\/]", ".")
+end
+
+-- Adjust libname if path contains proj prefix
+local function adjust_lib_name(path)
+	for _, prefix in ipairs(lua_source_prefixes) do
+		local s, e = path:find(prefix, 1, true)
+		if s == 1 and path:len() > e + 1 then
+			return path:sub(e + 1)
+		end
+	end
+	return path
+end
+
 -- Required Lua source files.
 local lua_source_files = {}
 -- Libraries for required Lua binary modules.
@@ -121,6 +140,7 @@ for i, name in ipairs(arg) do
 		info.dotpath_underscore = info.dotpath_noextension:gsub("[.-]", "_")
 
 		if i == 1 or is_source_file(extension) then
+			info.dotpath_noextension = adjust_lib_name(info.dotpath_noextension)
 			table.insert(lua_source_files, info)
 		elseif is_binary_library(extension) then
 			-- The library is either a Lua module or a library dependency.
