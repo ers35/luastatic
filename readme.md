@@ -45,6 +45,16 @@ luastatic main.lua[1] require.lua[2] liblua.a[3] library.a[4] -I/include/lua[5] 
 ### Generate the C file but don't compile it
 `CC="" luastatic main.lua`
 
+### Lua using Homebrew
+```sh
+# Install Lua and LuaRocks from Homebrew.
+brew install lua luarocks
+# Install luastatic from LuaRocks.
+luarocks install luastatic
+# Build using the Homebrew installation path.
+luastatic main.lua $(brew --prefix lua)/lib/liblua.a -I$(brew --prefix lua)/include/lua
+```
+
 See another example at [Lua.Space](http://lua.space/tools/build-a-standalone-executable).
 
 ## Users
