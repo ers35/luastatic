@@ -2,10 +2,39 @@
 
 -- The author disclaims copyright to this source code.
 
+local is_windows = _G.package.config:sub(1, 1) == "\\"
+local is_msvc = os.getenv("VSINSTALLDIR") ~= nil
+local is_cross = false
+
 -- The C compiler used to compile and link the generated C source file.
-local CC = os.getenv("CC") or "cc"
+local CC = os.getenv("CC")
 -- The nm used to determine whether a library is liblua or a Lua binary module.
-local NM = os.getenv("NM") or "nm"
+local NM = os.getenv("NM")
+
+if CC == nil then
+	if is_windows and is_msvc then
+		CC = "cl"
+	elseif is_windows then
+		CC = "gcc"
+	else
+		CC = "cc"
+	end
+end
+
+if string.find(CC, "mingw") and not is_windows then
+	is_cross = true
+	is_windows = true
+end
+
+if NM == nil then
+	if CC == "clang" or CC == "clang-cl" then
+		NM = "llvm-nm"
+	elseif is_windows and is_msvc then
+		NM = "dumpbin"
+	else
+		NM = "nm"
+	end
+end
 
 local function file_exists(name)
 	local file = io.open(name, "r")
@@ -48,6 +77,7 @@ local function string_to_c_hex_literal(characters)
 	end
 	return table.concat(hex, ", ")
 end
+
 assert(string_to_c_hex_literal("hello") == "0x68, 0x65, 0x6c, 0x6c, 0x6f")
 
 --[[
@@ -57,23 +87,22 @@ local function basename(path)
 	local name = path:gsub([[(.*[\/])(.*)]], "%2")
 	return name
 end
+
 assert(basename("/path/to/file.lua") == "file.lua")
 assert(basename([[C:\path\to\file.lua]]) == "file.lua")
 
 local function is_source_file(extension)
-	return
-		-- Source file.
-		extension == "lua" or
+	return-- Source file.
+ extension == "lua" or
 		-- Precompiled chunk.
 		extension == "luac"
 end
 
 local function is_binary_library(extension)
-	return 
-		-- Object file.
-		extension == "o" or 
+	return-- Object file.
+ extension == "o" or
 		-- Static library.
-		extension == "a" or 
+		extension == "a" or
 		-- Shared library.
 		extension == "so" or
 		-- Mach-O dynamic library.
@@ -90,7 +119,12 @@ local dep_library_files = {}
 -- Additional arguments are passed to the C compiler.
 local other_arguments = {}
 -- Get the operating system name.
-local UNAME = (shellout("uname -s") or "Unknown"):match("%a+") or "Unknown"
+local UNAME = "Windows"
+
+if not is_windows then
+	UNAME = (shellout("uname -s") or "Unknown"):match("%a+") or "Unknown"
+end
+
 local link_with_libdl = ""
 
 --[[
@@ -188,6 +222,7 @@ local outfile = io.open(outfilename, "w+")
 local function out(...)
 	outfile:write(...)
 end
+
 local function outhex(str)
 	outfile:write(string_to_c_hex_literal(str), ", ")
 end
@@ -433,34 +468,75 @@ if os.getenv("CC") == "" then
 	os.exit(0)
 end
 
-if not execute(CC .. " --version 1>/dev/null 2>/dev/null") then
+local compiler_check = CC
+
+if is_windows and not is_cross then
+	if is_msvc then
+		compiler_check = CC .. " > nul 2>&1"
+	else
+		compiler_check = CC .. " --version > nul 2>&1"
+	end
+elseif not is_msvc then
+	compiler_check = CC .. " --version 1>/dev/null 2>/dev/null"
+end
+
+if not execute(compiler_check) then
 	io.stderr:write("C compiler not found.\n")
 	os.exit(1)
 end
 
--- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
-local rdynamic = "-rdynamic"
-local binary_extension = ""
-if shellout(CC .. " -dumpmachine"):match("mingw") then
-	rdynamic = ""
-	binary_extension = ".exe"
+local compile_command = { CC }
+
+if is_windows and is_msvc then
+	table.insert(compile_command, "-nologo")
 end
 
-local compile_command = table.concat({
-	CC,
-	"-Os",
-	outfilename,
-	-- Link with Lua modules first to avoid linking errors.
-	table.concat(module_link_libraries, " "),
-	table.concat(dep_library_files, " "),
-	rdynamic,
-	"-lm",
-	link_with_libdl,
-	"-o " .. mainlua.basename_noextension .. binary_extension,
-	table.concat(other_arguments, " "),
-}, " ")
-print(compile_command)
-local ok = execute(compile_command)
+table.insert(compile_command, "-Os")
+table.insert(compile_command, outfilename)
+
+-- Link with Lua modules first to avoid linking errors.
+local concated_module_link_libraries = table.concat(module_link_libraries, " ")
+
+if concated_module_link_libraries ~= "" then
+	table.insert(compile_command, concated_module_link_libraries)
+end
+
+local concated_dep_library_files = table.concat(dep_library_files, " ")
+
+if concated_dep_library_files ~= "" then
+	table.insert(compile_command, concated_dep_library_files)
+end
+
+-- http://lua-users.org/lists/lua-l/2009-05/msg00147.html
+if not is_windows then
+	table.insert(compile_command, "-rdynamic")
+end
+
+if is_windows and is_msvc then
+	table.insert(compile_command, "-MD")
+elseif is_windows and (CC == "clang" or CC == "clang-cl") then
+	table.insert(compile_command, "-lmsvcrt")
+	table.insert(compile_command, "-llibcmt")
+else
+	table.insert(compile_command, "-lm")
+	
+	if link_with_libdl ~= "" then
+		table.insert(compile_command, link_with_libdl)
+	end
+end
+
+if is_windows and is_msvc then
+	table.insert(compile_command, "-Fe:" .. mainlua.basename_noextension .. ".exe")
+else
+	table.insert(compile_command, "-o")
+	table.insert(compile_command, mainlua.basename_noextension .. (is_windows and ".exe" or ""))
+end
+
+table.insert(compile_command, table.concat(other_arguments, " "))
+
+local compile_command_final = table.concat(compile_command, " ")
+print(compile_command_final)
+local ok = execute(compile_command_final)
 if ok then
 	os.exit(0)
 else
