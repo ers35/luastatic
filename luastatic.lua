@@ -158,7 +158,7 @@ for i, name in ipairs(arg) do
 			table.insert(lua_source_files, info)
 		elseif is_binary_library(extension) then
 			-- The library is either a Lua module or a library dependency.
-			local nmout = shellout(NM .. " " .. info.path)
+			local nmout = shellout(NM .. (NM == "dumpbin" and " /SYMBOLS " or " ") .. info.path)
 			if not nmout then
 				io.stderr:write("nm not found\n")
 				os.exit(1)
