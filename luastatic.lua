@@ -106,7 +106,9 @@ local function is_binary_library(extension)
 		-- Shared library.
 		extension == "so" or
 		-- Mach-O dynamic library.
-		extension == "dylib"
+		extension == "dylib" or
+		-- Windows library.
+		extension == "lib"
 end
 
 -- Required Lua source files.
