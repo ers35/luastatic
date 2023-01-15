@@ -7,6 +7,9 @@ local CC = os.getenv("CC") or "cc"
 -- The nm used to determine whether a library is liblua or a Lua binary module.
 local NM = os.getenv("NM") or "nm"
 
+-- The OS Null device.
+local NULL = (string.sub(package.config, 1, 1) == '\\') and "NUL" or "/dev/null"
+
 local function file_exists(name)
 	local file = io.open(name, "r")
 	if file then
@@ -433,7 +436,7 @@ if os.getenv("CC") == "" then
 	os.exit(0)
 end
 
-if not execute(CC .. " --version 1>/dev/null 2>/dev/null") then
+if not execute(CC .. " --version 1>" .. NULL .. " 2>" .. NULL) then
 	io.stderr:write("C compiler not found.\n")
 	os.exit(1)
 end
