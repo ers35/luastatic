@@ -319,6 +319,33 @@ out([[
 }
 #endif
 
+static const luaL_Reg loadedlibs[] = {
+  {LUA_GNAME, luaopen_base},
+  {LUA_LOADLIBNAME, luaopen_package},
+  {LUA_COLIBNAME, luaopen_coroutine},
+  {LUA_TABLIBNAME, luaopen_table},
+  {LUA_IOLIBNAME, luaopen_io},
+  {LUA_OSLIBNAME, luaopen_os},
+  {LUA_STRLIBNAME, luaopen_string},
+  {LUA_MATHLIBNAME, luaopen_math},
+  {LUA_UTF8LIBNAME, luaopen_utf8},
+  {LUA_DBLIBNAME, luaopen_debug},
+]])
+for _, library in ipairs(module_library_files) do
+	out(('	{"%s", luaopen_%s},\n'):format(library.dotpath_underscore, library.dotpath_underscore))
+end
+out([[
+	{NULL, NULL}
+};
+
+/* override Lua openlibs to add user libraries */
+LUALIB_API void luaL_openlibs (lua_State *L) {
+  const luaL_Reg *lib;
+  for (lib = loadedlibs; lib->func; lib++) {
+    luaL_requiref(L, lib->name, lib->func, 1);
+    lua_pop(L, 1);  /* remove lib */
+  }
+}
 
 int main(int argc, char *argv[])
 {
@@ -406,11 +433,6 @@ for i, file in ipairs(lua_source_files) do
 	lua_pushlstring(L, (const char*)lua_require_%i, sizeof(lua_require_%i));
 ]]):format(i, i))
 	out(('	lua_setfield(L, -2, "%s");\n\n'):format(file.dotpath_noextension))
-end
-
-for _, library in ipairs(module_library_files) do
-	out(('	lua_pushcfunction(L, luaopen_%s);\n'):format(library.dotpath_underscore))
-	out(('	lua_setfield(L, -2, "%s");\n\n'):format(library.dotpath_noextension))
 end
 
 out([[
