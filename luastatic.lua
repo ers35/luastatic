@@ -7,6 +7,9 @@ local CC = os.getenv("CC") or "cc"
 -- The nm used to determine whether a library is liblua or a Lua binary module.
 local NM = os.getenv("NM") or "nm"
 
+-- The OS Null device.
+local NULL = (string.sub(package.config, 1, 1) == '\\') and "NUL" or "/dev/null"
+
 local function file_exists(name)
 	local file = io.open(name, "r")
 	if file then
@@ -316,6 +319,33 @@ out([[
 }
 #endif
 
+static const luaL_Reg loadedlibs[] = {
+  {LUA_GNAME, luaopen_base},
+  {LUA_LOADLIBNAME, luaopen_package},
+  {LUA_COLIBNAME, luaopen_coroutine},
+  {LUA_TABLIBNAME, luaopen_table},
+  {LUA_IOLIBNAME, luaopen_io},
+  {LUA_OSLIBNAME, luaopen_os},
+  {LUA_STRLIBNAME, luaopen_string},
+  {LUA_MATHLIBNAME, luaopen_math},
+  {LUA_UTF8LIBNAME, luaopen_utf8},
+  {LUA_DBLIBNAME, luaopen_debug},
+]])
+for _, library in ipairs(module_library_files) do
+	out(('	{"%s", luaopen_%s},\n'):format(library.dotpath_underscore, library.dotpath_underscore))
+end
+out([[
+	{NULL, NULL}
+};
+
+/* override Lua openlibs to add user libraries */
+LUALIB_API void luaL_openlibs (lua_State *L) {
+  const luaL_Reg *lib;
+  for (lib = loadedlibs; lib->func; lib++) {
+    luaL_requiref(L, lib->name, lib->func, 1);
+    lua_pop(L, 1);  /* remove lib */
+  }
+}
 
 int main(int argc, char *argv[])
 {
@@ -405,11 +435,6 @@ for i, file in ipairs(lua_source_files) do
 	out(('	lua_setfield(L, -2, "%s");\n\n'):format(file.dotpath_noextension))
 end
 
-for _, library in ipairs(module_library_files) do
-	out(('	lua_pushcfunction(L, luaopen_%s);\n'):format(library.dotpath_underscore))
-	out(('	lua_setfield(L, -2, "%s");\n\n'):format(library.dotpath_noextension))
-end
-
 out([[
 	if (docall(L, 1, LUA_MULTRET))
 	{
@@ -433,7 +458,7 @@ if os.getenv("CC") == "" then
 	os.exit(0)
 end
 
-if not execute(CC .. " --version 1>/dev/null 2>/dev/null") then
+if not execute(CC .. " --version 1>" .. NULL .. " 2>" .. NULL) then
 	io.stderr:write("C compiler not found.\n")
 	os.exit(1)
 end
